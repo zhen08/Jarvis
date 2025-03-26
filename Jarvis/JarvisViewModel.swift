@@ -1,4 +1,22 @@
 import Foundation
+import SwiftUI
+
+enum AssistantRole: String, CaseIterable {
+    case chat = "Chat"
+    case translate = "Translate"
+    case explain = "Explain"
+    
+    var prompt: String {
+        switch self {
+        case .chat:
+            return "You are a helpful AI assistant. Please respond to the following conversation:\n\n"
+        case .translate:
+            return "Translate the following text to Chinese. Only provide the translation without any additional explanation:\n\n"
+        case .explain:
+            return "Explain the meaning of the following word or phrase in simple terms:\n\n"
+        }
+    }
+}
 
 struct Message: Identifiable, Equatable {
     let id = UUID()
@@ -10,10 +28,11 @@ struct Message: Identifiable, Equatable {
     }
 }
 
-class ChatViewModel: ObservableObject {
+class JarvisViewModel: ObservableObject {
     @Published var messages: [Message] = []
     @Published var availableModels: [String] = []
-    @Published var selectedModel: String = "llama2"
+    @Published var selectedModel: String = "gemma3:12b"
+    @Published var selectedRole: AssistantRole = .chat
     @Published var isLoading = false
     @Published var errorMessage: String?
     
@@ -21,6 +40,25 @@ class ChatViewModel: ObservableObject {
     
     init() {
         loadAvailableModels()
+    }
+    
+    func clearMessages() {
+        messages.removeAll()
+    }
+    
+    private func buildPrompt(for content: String) -> String {
+        switch selectedRole {
+        case .chat:
+            // Build chat history
+            var chatHistory = selectedRole.prompt
+            for message in messages {
+                chatHistory += "\(message.isUser ? "User" : "Assistant"): \(message.content)\n\n"
+            }
+            chatHistory += "User: \(content)\n\nAssistant:"
+            return chatHistory
+        default:
+            return selectedRole.prompt + content
+        }
     }
     
     func loadAvailableModels() {
@@ -41,7 +79,7 @@ class ChatViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     self?.availableModels = response.models.map { $0.name }
                     if ((self?.availableModels.contains(self?.selectedModel ?? "")) == nil) {
-                        self?.selectedModel = self?.availableModels.first ?? "llama2"
+                        self?.selectedModel = self?.availableModels.first ?? "gemma3:12b"
                     }
                 }
             } catch {
@@ -91,7 +129,8 @@ class ChatViewModel: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        let body = OllamaRequest(model: selectedModel, prompt: content, stream: false)
+        let prompt = buildPrompt(for: content)
+        let body = OllamaRequest(model: selectedModel, prompt: prompt, stream: false)
         request.httpBody = try? JSONEncoder().encode(body)
         
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in

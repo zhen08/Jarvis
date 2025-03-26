@@ -6,16 +6,16 @@
     objectVersion = 56;
     objects = {
         /* Begin PBXBuildFile section */
-        1A1A1A1A1A1A1A1A1A1A1A1A /* ChatAssistantApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A1A1A1A1A1A1A1A1A1A1B /* ChatAssistantApp.swift */; };
+        1A1A1A1A1A1A1A1A1A1A1A1A /* JarvisApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A1A1A1A1A1A1A1A1A1A1B /* JarvisApp.swift */; };
         1A1A1A1A1A1A1A1A1A1A1A1C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A1A1A1A1A1A1A1A1A1A1D /* ContentView.swift */; };
-        1A1A1A1A1A1A1A1A1A1A1A1E /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A1A1A1A1A1A1A1A1A1A1F /* ChatViewModel.swift */; };
+        1A1A1A1A1A1A1A1A1A1A1A1E /* JarvisViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A1A1A1A1A1A1A1A1A1A1F /* JarvisViewModel.swift */; };
         /* End PBXBuildFile section */
         
         /* Begin PBXFileReference section */
-        1A1A1A1A1A1A1A1A1A1A1A0A /* ChatAssistant.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChatAssistant.app; sourceTree = BUILT_PRODUCTS_DIR; };
-        1A1A1A1A1A1A1A1A1A1A1A1B /* ChatAssistantApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAssistantApp.swift; sourceTree = "<group>"; };
+        1A1A1A1A1A1A1A1A1A1A1A0A /* Jarvis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Jarvis.app; sourceTree = BUILT_PRODUCTS_DIR; };
+        1A1A1A1A1A1A1A1A1A1A1A1B /* JarvisApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JarvisApp.swift; sourceTree = "<group>"; };
         1A1A1A1A1A1A1A1A1A1A1A1D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-        1A1A1A1A1A1A1A1A1A1A1A1F /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
+        1A1A1A1A1A1A1A1A1A1A1A1F /* JarvisViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JarvisViewModel.swift; sourceTree = "<group>"; };
         /* End PBXFileReference section */
         
         /* Begin PBXFrameworksBuildPhase section */
@@ -29,20 +29,20 @@
         /* End PBXFrameworksBuildPhase section */
         
         /* Begin PBXGroup section */
-        1A1A1A1A1A1A1A1A1A1A1A21 /* ChatAssistant */ = {
+        1A1A1A1A1A1A1A1A1A1A1A21 /* Jarvis */ = {
             isa = PBXGroup;
             children = (
-                1A1A1A1A1A1A1A1A1A1A1A1B /* ChatAssistantApp.swift */,
+                1A1A1A1A1A1A1A1A1A1A1A1B /* JarvisApp.swift */,
                 1A1A1A1A1A1A1A1A1A1A1A1D /* ContentView.swift */,
-                1A1A1A1A1A1A1A1A1A1A1A1F /* ChatViewModel.swift */,
+                1A1A1A1A1A1A1A1A1A1A1A1F /* JarvisViewModel.swift */,
             );
-            path = ChatAssistant;
+            path = Jarvis;
             sourceTree = "<group>";
         };
         1A1A1A1A1A1A1A1A1A1A1A28 /* Products */ = {
             isa = PBXGroup;
             children = (
-                1A1A1A1A1A1A1A1A1A1A1A0A /* ChatAssistant.app */,
+                1A1A1A1A1A1A1A1A1A1A1A0A /* Jarvis.app */,
             );
             name = Products;
             sourceTree = "<group>";
@@ -51,7 +51,7 @@
             isa = PBXGroup;
             children = (
                 1A1A1A1A1A1A1A1A1A1A1A28 /* Products */,
-                1A1A1A1A1A1A1A1A1A1A1A21 /* ChatAssistant */,
+                1A1A1A1A1A1A1A1A1A1A1A21 /* Jarvis */,
             );
             name = Project;
             sourceTree = "<group>";
@@ -59,9 +59,9 @@
         /* End PBXGroup section */
         
         /* Begin PBXNativeTarget section */
-        1A1A1A1A1A1A1A1A1A1A1A22 /* ChatAssistant */ = {
+        1A1A1A1A1A1A1A1A1A1A1A22 /* Jarvis */ = {
             isa = PBXNativeTarget;
-            buildConfigurationList = 1A1A1A1A1A1A1A1A1A1A1A23 /* Build configuration list for PBXNativeTarget "ChatAssistant" */;
+            buildConfigurationList = 1A1A1A1A1A1A1A1A1A1A1A23 /* Build configuration list for PBXNativeTarget "Jarvis" */;
             buildPhases = (
                 1A1A1A1A1A1A1A1A1A1A1A20 /* Frameworks */,
                 1A1A1A1A1A1A1A1A1A1A1A24 /* Sources */,
@@ -70,9 +70,9 @@
             );
             dependencies = (
             );
-            name = ChatAssistant;
-            productName = ChatAssistant;
-            productReference = 1A1A1A1A1A1A1A1A1A1A1A0A /* ChatAssistant.app */;
+            name = Jarvis;
+            productName = Jarvis;
+            productReference = 1A1A1A1A1A1A1A1A1A1A1A0A /* Jarvis.app */;
             productType = "com.apple.product-type.application";
         };
         /* End PBXNativeTarget section */
@@ -90,7 +90,7 @@
                     };
                 };
             };
-            buildConfigurationList = 1A1A1A1A1A1A1A1A1A1A1A27 /* Build configuration list for PBXProject "ChatAssistant" */;
+            buildConfigurationList = 1A1A1A1A1A1A1A1A1A1A1A27 /* Build configuration list for PBXProject "Jarvis" */;
             compatibilityVersion = "Xcode 14.0";
             developmentRegion = en;
             hasScannedForEncodings = 0;
@@ -103,7 +103,7 @@
             projectDirPath = "";
             projectRoot = "";
             targets = (
-                1A1A1A1A1A1A1A1A1A1A1A22 /* ChatAssistant */,
+                1A1A1A1A1A1A1A1A1A1A1A22 /* Jarvis */,
             );
         };
         /* End PBXProject section */
@@ -113,9 +113,9 @@
             isa = PBXSourcesBuildPhase;
             buildActionMask = 2147483647;
             files = (
-                1A1A1A1A1A1A1A1A1A1A1A1A /* ChatAssistantApp.swift in Sources */,
+                1A1A1A1A1A1A1A1A1A1A1A1A /* JarvisApp.swift in Sources */,
                 1A1A1A1A1A1A1A1A1A1A1A1C /* ContentView.swift in Sources */,
-                1A1A1A1A1A1A1A1A1A1A1A1E /* ChatViewModel.swift in Sources */,
+                1A1A1A1A1A1A1A1A1A1A1A1E /* JarvisViewModel.swift in Sources */,
             );
             runOnlyForDeploymentPostprocessing = 0;
         };
@@ -230,7 +230,7 @@
                     "@executable_path/../Frameworks",
                 );
                 MARKETING_VERSION = 1.0;
-                PRODUCT_BUNDLE_IDENTIFIER = "com.example.ChatAssistant";
+                PRODUCT_BUNDLE_IDENTIFIER = "com.example.Jarvis";
                 PRODUCT_NAME = "$(TARGET_NAME)";
                 SWIFT_EMIT_LOC_STRINGS = YES;
                 SWIFT_VERSION = 5.0;
@@ -253,7 +253,7 @@
                     "@executable_path/../Frameworks",
                 );
                 MARKETING_VERSION = 1.0;
-                PRODUCT_BUNDLE_IDENTIFIER = "com.example.ChatAssistant";
+                PRODUCT_BUNDLE_IDENTIFIER = "com.example.Jarvis";
                 PRODUCT_NAME = "$(TARGET_NAME)";
                 SWIFT_EMIT_LOC_STRINGS = YES;
                 SWIFT_VERSION = 5.0;
@@ -263,7 +263,7 @@
         /* End XCBuildConfiguration section */
         
         /* Begin XCConfigurationList section */
-        1A1A1A1A1A1A1A1A1A1A1A27 /* Build configuration list for PBXProject "ChatAssistant" */ = {
+        1A1A1A1A1A1A1A1A1A1A1A27 /* Build configuration list for PBXProject "Jarvis" */ = {
             isa = XCConfigurationList;
             buildConfigurations = (
                 1A1A1A1A1A1A1A1A1A1A1A29 /* Debug */,
@@ -272,7 +272,7 @@
             defaultConfigurationIsVisible = 0;
             defaultConfigurationName = Release;
         };
-        1A1A1A1A1A1A1A1A1A1A1A23 /* Build configuration list for PBXNativeTarget "ChatAssistant" */ = {
+        1A1A1A1A1A1A1A1A1A1A1A23 /* Build configuration list for PBXNativeTarget "Jarvis" */ = {
             isa = XCConfigurationList;
             buildConfigurations = (
                 1A1A1A1A1A1A1A1A1A1A1A32 /* Debug */,

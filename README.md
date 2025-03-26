@@ -1,36 +1,36 @@
-# MacOS Chat Assistant
+# Jarvis
 
-A native macOS chat assistant application that uses Ollama for local LLM services.
+A native macOS AI assistant powered by Ollama. Jarvis provides a clean, native interface for interacting with various AI models through Ollama.
 
 ## Features
 
-- Native SwiftUI macOS application
-- Modern, clean interface
-- Support for multiple Ollama models
+- Native macOS app with SwiftUI interface
+- Supports multiple Ollama models
 - Real-time chat interface
-- Automatic model detection
-- Error handling and status feedback
-
-## Prerequisites
-
-1. Install Ollama from [https://ollama.ai](https://ollama.ai)
-2. Pull your desired models using Ollama CLI (e.g., `ollama pull llama2`)
-3. Make sure Ollama service is running
-
-## Development
-
-1. Open the project in Xcode
-2. Build and run the project (⌘R)
-
-## Usage
-
-1. Start the Ollama service
-2. Launch the Chat Assistant app
-3. Select a model from the dropdown menu
-4. Type your message and click the send button or press Return
+- Markdown rendering support
+- Menu bar quick access
+- Command+Enter shortcut for sending messages
+- Multiple assistant roles for different tasks
 
 ## Requirements
 
 - macOS 14.0 or later
-- Xcode 15.0 or later
-- Ollama installed and running locally 
+- [Ollama](https://ollama.ai) installed and running
+- At least one model pulled in Ollama (e.g., `ollama pull mistral`)
+
+## Installation
+
+1. Download the latest release
+2. Move Jarvis.app to your Applications folder
+3. Launch Jarvis
+4. Ensure Ollama is running (`ollama serve` in terminal)
+
+## Development
+
+1. Clone the repository
+2. Open Jarvis.xcodeproj in Xcode
+3. Build and run the project
+
+## License
+
+This project is open source and available under the MIT License. 
