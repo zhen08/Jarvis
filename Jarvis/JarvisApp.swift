@@ -11,6 +11,23 @@ struct JarvisApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
+        .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About Jarvis") {
+                    NSApplication.shared.orderFrontStandardAboutPanel(
+                        options: [
+                            NSApplication.AboutPanelOptionKey.credits: NSAttributedString(
+                                string: "A native macOS AI assistant powered by Ollama",
+                                attributes: [
+                                    .foregroundColor: NSColor.textColor
+                                ]
+                            ),
+                            NSApplication.AboutPanelOptionKey.version: ""
+                        ]
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -41,6 +58,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         window.delegate = windowDelegate
         window.center()
         window.makeKeyAndOrderFront(nil)
+        
+        // Set minimum window size
+        window.minSize = NSSize(width: 800, height: 600)
+        
+        // Set window appearance
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.backgroundColor = NSColor.windowBackgroundColor
     }
     
     @objc func toggleWindow() {

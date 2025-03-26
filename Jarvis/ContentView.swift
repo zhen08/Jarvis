@@ -10,36 +10,36 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Model and Role Selection
-            HStack(spacing: 16) {
-                    Picker("Model", selection: $viewModel.selectedModel) {
-                        ForEach(viewModel.availableModels, id: \.self) { model in
-                            Text(model).tag(model)
-                        }
+            HStack(spacing: 20.0) {
+                Picker("Model", selection: $viewModel.selectedModel) {
+                    ForEach(viewModel.availableModels, id: \.self) { model in
+                        Text(model).tag(model)
                     }
-                    .padding(.trailing, 5.0)
-                    .frame(width: 200)
+                }
+                .frame(width: 250)
                 
-                    Picker("Role", selection: $viewModel.selectedRole) {
-                        ForEach(AssistantRole.allCases, id: \.self) { role in
-                            Text(role.rawValue).tag(role)
-                        }
+                Picker("Role", selection: $viewModel.selectedRole) {
+                    ForEach(AssistantRole.allCases, id: \.self) { role in
+                        Text(role.rawValue).tag(role)
                     }
-                    .padding(.leading, 2.0)
-                    .frame(width: 120)
+                }
+                .frame(width: 150)
             }
-            .padding(0.0)
+            .padding(2.0)
             .background(Color(.windowBackgroundColor))
             
             // Chat Messages
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 12) {
+                    LazyVStack(spacing: 16) {
                         ForEach(viewModel.messages) { message in
                             MessageBubble(message: message)
                         }
                     }
-                    .padding()
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 16)
                 }
+                .background(Color(.textBackgroundColor))
                 .onChange(of: viewModel.messages) { messages, _ in
                     if let lastMessage = messages.last {
                         withAnimation {
@@ -52,17 +52,18 @@ struct ContentView: View {
             // Input Area
             VStack(spacing: 0) {
                 Divider()
-                HStack(alignment: .bottom, spacing: 8) {
+                HStack(alignment: .bottom, spacing: 12) {
                     CustomTextEditor(text: $messageText, onCommandReturn: {
                         let message = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
                         guard !message.isEmpty else { return }
                         messageText = ""
                         viewModel.sendMessage(message)
                     })
-                    .frame(height: 64)
+                    .padding(0.0)
+                    .frame(height: 80)
                     .focused($isEditorFocused)
                     
-                    VStack(spacing: 8) {
+                    VStack(spacing: 12) {
                         Button(action: {
                             let message = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
                             guard !message.isEmpty else { return }
@@ -70,21 +71,22 @@ struct ContentView: View {
                             viewModel.sendMessage(message)
                         }) {
                             Image(systemName: "arrow.up.circle.fill")
-                                .font(.system(size: 24))
+                                .font(.system(size: 28))
                         }
                         .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
                         
                         Button(action: { viewModel.clearMessages() }) {
                             Image(systemName: "trash.circle.fill")
-                                .font(.system(size: 24))
+                                .font(.system(size: 28))
                                 .foregroundColor(.red)
                         }
                         .help("Clear chat history")
                     }
                 }
-                .padding()
+                .padding(10.0)
             }
         }
+        .frame(minWidth: 800, minHeight: 600)
         .onChange(of: viewModel.errorMessage) { _, error in
             showingError = error != nil
         }
@@ -197,12 +199,12 @@ struct MessageBubble: View {
             VStack(alignment: message.isUser ? .trailing : .leading) {
                 Text(try! AttributedString(markdown: message.content, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
                     .textSelection(.enabled)
-                    .padding()
+                    .padding(16)
                     .background(message.isUser ? Color.accentColor : Color(.controlBackgroundColor))
                     .foregroundColor(message.isUser ? .white : .primary)
-                    .cornerRadius(12)
+                    .cornerRadius(16)
             }
-            .frame(maxWidth: 600, alignment: message.isUser ? .trailing : .leading)
+            .frame(maxWidth: 700, alignment: message.isUser ? .trailing : .leading)
             
             if !message.isUser {
                 Spacer()
