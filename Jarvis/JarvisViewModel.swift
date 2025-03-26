@@ -13,14 +13,14 @@ enum AssistantRole: String, CaseIterable {
         case .translate:
             return "Translate the following text between English and Chinese. Only provide the translation without any additional explanation:\n\n"
         case .explain:
-            return "Explain the meaning of the following word or phrase in simple terms in English and Chinese. Provide a detailed explanation of the word or phrase in both languages:\n\n"
+            return "Explain the meaning of the following word or phrase in simple terms in English:\n\n"
         }
     }
 }
 
 struct Message: Identifiable, Equatable {
     let id = UUID()
-    let content: String
+    var content: String
     let isUser: Bool
     
     static func == (lhs: Message, rhs: Message) -> Bool {
@@ -28,7 +28,7 @@ struct Message: Identifiable, Equatable {
     }
 }
 
-class JarvisViewModel: ObservableObject {
+class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
     @Published var messages: [Message] = []
     @Published var availableModels: [String] = []
     @Published var selectedModel: String = "gemma3:12b"
@@ -37,8 +37,11 @@ class JarvisViewModel: ObservableObject {
     @Published var errorMessage: String?
     
     private let ollamaBaseURL = "http://localhost:11434"
+    private var currentTask: URLSessionDataTask?
+    private var responseData = Data()
     
-    init() {
+    override init() {
+        super.init()
         loadAvailableModels()
     }
     
@@ -122,6 +125,7 @@ class JarvisViewModel: ObservableObject {
         
         isLoading = true
         errorMessage = nil
+        responseData = Data()
         
         guard let url = URL(string: "\(ollamaBaseURL)/api/generate") else { return }
         
@@ -130,33 +134,44 @@ class JarvisViewModel: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let prompt = buildPrompt(for: content)
-        let body = OllamaRequest(model: selectedModel, prompt: prompt, stream: false)
+        let body = OllamaRequest(model: selectedModel, prompt: prompt, stream: true)
         request.httpBody = try? JSONEncoder().encode(body)
         
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            DispatchQueue.main.async {
-                self?.isLoading = false
-                
-                if let error = error {
-                    self?.errorMessage = "Failed to send message: \(error.localizedDescription)"
-                    return
-                }
-                
-                guard let data = data else {
-                    self?.errorMessage = "No data received"
-                    return
-                }
-                
-                do {
-                    let response = try JSONDecoder().decode(OllamaResponse.self, from: data)
-                    let formattedResponse = self?.formatMarkdown(response.response) ?? response.response
-                    let assistantMessage = Message(content: formattedResponse, isUser: false)
-                    self?.messages.append(assistantMessage)
-                } catch {
-                    self?.errorMessage = "Failed to parse response: \(error.localizedDescription)"
+        let assistantMessage = Message(content: "", isUser: false)
+        messages.append(assistantMessage)
+        
+        let session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
+        currentTask = session.dataTask(with: request)
+        currentTask?.resume()
+    }
+    
+    // URLSessionDataDelegate methods
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        responseData.append(data)
+        
+        if let responseString = String(data: data, encoding: .utf8) {
+            let lines = responseString.components(separatedBy: .newlines)
+            for line in lines {
+                if line.isEmpty { continue }
+                if let jsonData = line.data(using: .utf8),
+                   let response = try? JSONDecoder().decode(OllamaResponse.self, from: jsonData) {
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self, !self.messages.isEmpty else { return }
+                        let formattedResponse = self.formatMarkdown(response.response)
+                        self.messages[self.messages.count - 1].content += formattedResponse
+                    }
                 }
             }
-        }.resume()
+        }
+    }
+    
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        DispatchQueue.main.async {
+            self.isLoading = false
+            if let error = error {
+                self.errorMessage = "Failed to send message: \(error.localizedDescription)"
+            }
+        }
     }
 }
 
