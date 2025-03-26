@@ -5,34 +5,29 @@ struct ContentView: View {
     @EnvironmentObject private var appDelegate: AppDelegate
     @State private var messageText = ""
     @State private var showingError = false
+    @FocusState private var isEditorFocused: Bool
     
     var body: some View {
         VStack(spacing: 0) {
             // Model and Role Selection
             HStack(spacing: 16) {
-                HStack {
-                    Text("Model:")
-                        .foregroundColor(.secondary)
                     Picker("Model", selection: $viewModel.selectedModel) {
                         ForEach(viewModel.availableModels, id: \.self) { model in
                             Text(model).tag(model)
                         }
                     }
+                    .padding(.trailing, 5.0)
                     .frame(width: 200)
-                }
                 
-                HStack {
-                    Text("Role:")
-                        .foregroundColor(.secondary)
                     Picker("Role", selection: $viewModel.selectedRole) {
                         ForEach(AssistantRole.allCases, id: \.self) { role in
                             Text(role.rawValue).tag(role)
                         }
                     }
+                    .padding(.leading, 2.0)
                     .frame(width: 120)
-                }
             }
-            .padding()
+            .padding(0.0)
             .background(Color(.windowBackgroundColor))
             
             // Chat Messages
@@ -65,6 +60,7 @@ struct ContentView: View {
                         viewModel.sendMessage(message)
                     })
                     .frame(height: 64)
+                    .focused($isEditorFocused)
                     
                     VStack(spacing: 8) {
                         Button(action: {
@@ -103,6 +99,7 @@ struct ContentView: View {
         }
         .onAppear {
             setupWindowBehavior()
+            isEditorFocused = true
         }
     }
     

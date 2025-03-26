@@ -11,9 +11,9 @@ enum AssistantRole: String, CaseIterable {
         case .chat:
             return "You are a helpful AI assistant. Please respond to the following conversation:\n\n"
         case .translate:
-            return "Translate the following text to Chinese. Only provide the translation without any additional explanation:\n\n"
+            return "Translate the following text between English and Chinese. Only provide the translation without any additional explanation:\n\n"
         case .explain:
-            return "Explain the meaning of the following word or phrase in simple terms:\n\n"
+            return "Explain the meaning of the following word or phrase in simple terms in English and Chinese. Provide a detailed explanation of the word or phrase in both languages:\n\n"
         }
     }
 }
@@ -32,7 +32,7 @@ class JarvisViewModel: ObservableObject {
     @Published var messages: [Message] = []
     @Published var availableModels: [String] = []
     @Published var selectedModel: String = "gemma3:12b"
-    @Published var selectedRole: AssistantRole = .chat
+    @Published var selectedRole: AssistantRole = .translate
     @Published var isLoading = false
     @Published var errorMessage: String?
     
