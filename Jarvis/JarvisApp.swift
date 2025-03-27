@@ -40,6 +40,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var eventHotKeyRef: EventHotKeyRef?
     private var eventHotKeyID = EventHotKeyID()
     private var eventHandler: EventHandlerRef?
+    @Published private(set) var isModelLoading = false
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Create status bar item
@@ -58,6 +59,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         
         // Register global shortcut (Command + Shift + J)
         registerGlobalShortcut()
+        
+        // Preload the Gemma model
+        preloadModel()
     }
     
     func setupWindow(_ window: NSWindow) {
@@ -134,6 +138,52 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         if hotkeyStatus != noErr {
             print("Failed to register global shortcut")
         }
+    }
+    
+    private func preloadModel() {
+        isModelLoading = true
+        
+        guard let url = URL(string: "http://localhost:11434/api/generate") else {
+            print("Invalid URL")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = [
+            "model": "gemma3:12b",
+            "prompt": "Hello",
+            "stream": false,
+            "keep_alive": -1 // Keep model permanently in memory
+        ] as [String: Any]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            print("Failed to create request body: \(error)")
+            return
+        }
+        
+        let task = URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
+            DispatchQueue.main.async {
+                self?.isModelLoading = false
+                
+                if let error = error {
+                    print("Failed to preload model: \(error)")
+                    return
+                }
+                
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+                    print("Failed to preload model. Status code: \(httpResponse.statusCode)")
+                    return
+                }
+                
+                print("Successfully preloaded gemma3:12b model with permanent keep-alive")
+            }
+        }
+        task.resume()
     }
     
     deinit {
