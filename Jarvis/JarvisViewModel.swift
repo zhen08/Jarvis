@@ -11,7 +11,7 @@ enum AssistantRole: String, CaseIterable {
         case .chat:
             return "You are a helpful AI assistant. Please respond to the following conversation:\n\n"
         case .translate:
-            return "Translate the following text between English and Chinese. Only provide the translation without any additional explanation:\n\n"
+            return "Translate the following text between English and Simplified Chinese. Only provide the translation without any additional explanation or use any other formatting, list all possible translations if there are multiple:\n\n"
         case .explain:
             return "Explain the meaning of the following word or phrase in simple terms in English:\n\n"
         }
