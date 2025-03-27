@@ -32,7 +32,13 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
     @Published var messages: [Message] = []
     @Published var availableModels: [String] = []
     @Published var selectedModel: String = "gemma3:12b"
-    @Published var selectedRole: AssistantRole = .translate
+    @Published var selectedRole: AssistantRole = .translate {
+        didSet {
+            if oldValue != selectedRole {
+                clearMessages()
+            }
+        }
+    }
     @Published var isLoading = false
     @Published var errorMessage: String?
     
