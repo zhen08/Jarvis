@@ -41,7 +41,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "message.fill", accessibilityDescription: "Chat Assistant")
+            button.image = NSImage(systemSymbolName: "brain", accessibilityDescription: "Chat Assistant")
             button.target = self
             button.action = #selector(toggleWindow)
         }
