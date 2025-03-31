@@ -5,6 +5,7 @@ enum AssistantRole: String, CaseIterable {
     case chat = "Chat"
     case translate = "Translate"
     case explain = "Explain"
+    case fixGrammar = "Fix Grammar"
     
     var prompt: String {
         switch self {
@@ -14,6 +15,8 @@ enum AssistantRole: String, CaseIterable {
             return "Translate the following text between English and Simplified Chinese. Only provide the translation without any additional explanation or use any other formatting, list all possible translations if there are multiple:\n\n"
         case .explain:
             return "Explain the meaning of the following word or phrase in simple terms in English:\n\n"
+        case .fixGrammar:
+            return "Fix the grammar and improve the writing of the following text. Only provide the corrected version without any additional explanation:\n\n"
         }
     }
 }

@@ -19,6 +19,7 @@
 		1A1A1A1A1A1A1A1A1A1A1A1D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		1A1A1A1A1A1A1A1A1A1A1A1F /* JarvisViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JarvisViewModel.swift; sourceTree = "<group>"; };
 		1A1A1A1A1A1A1A1A1A1A1A2E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1A1A1A1A1A1A1A1A1A1A1A34 /* Jarvis.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Jarvis.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,6 +40,7 @@
 				1A1A1A1A1A1A1A1A1A1A1A1D /* ContentView.swift */,
 				1A1A1A1A1A1A1A1A1A1A1A1F /* JarvisViewModel.swift */,
 				1A1A1A1A1A1A1A1A1A1A1A2E /* Assets.xcassets */,
+				1A1A1A1A1A1A1A1A1A1A1A34 /* Jarvis.entitlements */,
 			);
 			path = Jarvis;
 			sourceTree = "<group>";
@@ -255,6 +257,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
+				CODE_SIGN_ENTITLEMENTS = Jarvis/Jarvis.entitlements;
 			};
 			name = Debug;
 		};
@@ -283,6 +286,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
+				CODE_SIGN_ENTITLEMENTS = Jarvis/Jarvis.entitlements;
 			};
 			name = Release;
 		};
