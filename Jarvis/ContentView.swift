@@ -20,7 +20,9 @@ struct ContentView: View {
                 
                 Picker("Role", selection: $viewModel.selectedRole) {
                     ForEach(AssistantRole.allCases, id: \.self) { role in
-                        Text(role.rawValue).tag(role)
+                        Text(role.rawValue)
+                            .tag(role)
+                            .keyboardShortcut(role.shortcut, modifiers: .command)
                     }
                 }
                 .frame(width: 150)
