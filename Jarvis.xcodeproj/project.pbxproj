@@ -20,6 +20,7 @@
 		1A1A1A1A1A1A1A1A1A1A1A1F /* JarvisViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JarvisViewModel.swift; sourceTree = "<group>"; };
 		1A1A1A1A1A1A1A1A1A1A1A2E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1A1A1A1A1A1A1A1A1A1A1A34 /* Jarvis.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Jarvis.entitlements; sourceTree = "<group>"; };
+		6F807C1F2D9AB0400051DCFF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -36,6 +37,7 @@
 		1A1A1A1A1A1A1A1A1A1A1A21 /* Jarvis */ = {
 			isa = PBXGroup;
 			children = (
+				6F807C1F2D9AB0400051DCFF /* Info.plist */,
 				1A1A1A1A1A1A1A1A1A1A1A1B /* JarvisApp.swift */,
 				1A1A1A1A1A1A1A1A1A1A1A1D /* ContentView.swift */,
 				1A1A1A1A1A1A1A1A1A1A1A1F /* JarvisViewModel.swift */,
@@ -245,6 +247,7 @@
 				DEVELOPMENT_TEAM = Z9486ZH43D;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Jarvis/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Jarvis L";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -274,6 +277,7 @@
 				DEVELOPMENT_TEAM = Z9486ZH43D;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Jarvis/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Jarvis L";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
