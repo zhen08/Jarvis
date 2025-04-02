@@ -102,16 +102,32 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            setupWindowBehavior()
             isEditorFocused = true
         }
+        .background(WindowAccessor { window in
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
+            window.backgroundColor = NSColor.windowBackgroundColor
+            window.center()
+            appDelegate.setMainWindow(window)
+        })
+    }
+}
+
+struct WindowAccessor: NSViewRepresentable {
+    let callback: (NSWindow) -> Void
+    
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            if let window = view.window {
+                callback(window)
+            }
+        }
+        return view
     }
     
-    private func setupWindowBehavior() {
-        if let window = NSApplication.shared.windows.first {
-            appDelegate.setupWindow(window)
-        }
-    }
+    func updateNSView(_ nsView: NSView, context: Context) {}
 }
 
 struct CustomTextEditor: NSViewRepresentable {

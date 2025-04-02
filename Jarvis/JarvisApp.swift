@@ -35,8 +35,7 @@ struct JarvisApp: App {
 
 class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var statusItem: NSStatusItem?
-    var window: NSWindow?
-    private var windowDelegate: WindowDelegate?
+    private var mainWindow: NSWindow?
     private var eventHotKeyRef: EventHotKeyRef?
     private var eventHotKeyID = EventHotKeyID()
     private var eventHandler: EventHandlerRef?
@@ -52,43 +51,42 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             button.action = #selector(toggleWindow)
         }
         
-        // Get the window
-        if let window = NSApplication.shared.windows.first {
-            setupWindow(window)
-        }
-        
         // Register global shortcut (Command + Shift + J)
         registerGlobalShortcut()
         
         // Preload the Gemma model
         preloadModel()
-    }
-    
-    func setupWindow(_ window: NSWindow) {
-        self.window = window
-        self.windowDelegate = WindowDelegate()
-        window.delegate = windowDelegate
-        window.center()
-        window.makeKeyAndOrderFront(nil)
         
-        // Set minimum window size
-        window.minSize = NSSize(width: 800, height: 600)
-        
-        // Set window appearance
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.backgroundColor = NSColor.windowBackgroundColor
+        // Capture the main window
+        DispatchQueue.main.async {
+            self.mainWindow = NSApplication.shared.windows.first(where: { $0.isVisible })
+        }
     }
     
     @objc func toggleWindow() {
-        guard let window = window else { return }
+        // Try to find the main window if we don't have it yet
+        if mainWindow == nil {
+            mainWindow = NSApplication.shared.windows.first(where: { $0.title != "" })
+            // If still nil, just take the first window
+            if mainWindow == nil {
+                mainWindow = NSApplication.shared.windows.first
+            }
+        }
+        
+        guard let window = mainWindow else { return }
         
         if window.isVisible {
             window.orderOut(nil)
         } else {
             window.makeKeyAndOrderFront(nil)
+            window.center()
             NSApplication.shared.activate(ignoringOtherApps: true)
         }
+    }
+    
+    // A method that can be called from SwiftUI to set the main window
+    func setMainWindow(_ window: NSWindow) {
+        self.mainWindow = window
     }
     
     private func registerGlobalShortcut() {
@@ -192,14 +190,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         }
         if let eventHandler = eventHandler {
             RemoveEventHandler(eventHandler)
-        }
-    }
-}
-
-class WindowDelegate: NSObject, NSWindowDelegate {
-    func windowWillClose(_ notification: Notification) {
-        if let window = notification.object as? NSWindow {
-            window.orderOut(nil)
         }
     }
 } 
