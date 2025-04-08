@@ -2,14 +2,14 @@ import Foundation
 import SwiftUI
 
 enum AssistantRole: String, CaseIterable {
-    case chat = "Chat"
+    case chat = "General Chat"
     case translate = "Translate"
     case explain = "Explain"
     case fixGrammar = "Fix Grammar"
     
     var shortcut: KeyEquivalent {
         switch self {
-        case .chat: return "c"
+        case .chat: return "g"
         case .translate: return "t"
         case .explain: return "e"
         case .fixGrammar: return "f"
