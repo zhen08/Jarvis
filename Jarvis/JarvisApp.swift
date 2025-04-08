@@ -54,9 +54,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         // Register global shortcut (Command + Shift + J)
         registerGlobalShortcut()
         
-        // Preload the Gemma model
-        preloadModel()
-        
         // Capture the main window
         DispatchQueue.main.async {
             self.mainWindow = NSApplication.shared.windows.first(where: { $0.isVisible })
@@ -137,53 +134,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             print("Failed to register global shortcut")
         }
     }
-    
-    private func preloadModel() {
-        isModelLoading = true
         
-        guard let url = URL(string: "http://localhost:11434/api/generate") else {
-            print("Invalid URL")
-            return
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let body = [
-            "model": "gemma3:12b",
-            "prompt": "Hello",
-            "stream": false,
-            "keep_alive": -1 // Keep model permanently in memory
-        ] as [String: Any]
-        
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        } catch {
-            print("Failed to create request body: \(error)")
-            return
-        }
-        
-        let task = URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
-            DispatchQueue.main.async {
-                self?.isModelLoading = false
-                
-                if let error = error {
-                    print("Failed to preload model: \(error)")
-                    return
-                }
-                
-                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
-                    print("Failed to preload model. Status code: \(httpResponse.statusCode)")
-                    return
-                }
-                
-                print("Successfully preloaded gemma3:12b model with permanent keep-alive")
-            }
-        }
-        task.resume()
-    }
-    
     deinit {
         if let eventHotKeyRef = eventHotKeyRef {
             UnregisterEventHotKey(eventHotKeyRef)
