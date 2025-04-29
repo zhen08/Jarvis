@@ -16,16 +16,19 @@ enum AssistantRole: String, CaseIterable {
         }
     }
     
-    var prompt: String {
+    var systemPrompt: String {
         switch self {
         case .chat:
-            return "You are a helpful AI assistant. Please respond to the following conversation:\n\n"
+            // Using an empty system prompt for chat for now, 
+            // history is managed in the main prompt.
+            // Alternatively, provide a base persona here.
+            return "You are a helpful AI assistant." 
         case .translate:
-            return "Translate the following text between English and Simplified Chinese. Only provide the translation without any additional explanation or use any other formatting, list all possible translations if there are multiple:\n\n"
+            return "Do not reason. You are a translator. If the following word or sentence is in English, translate it into Chinese. If the word or sentence is in Chinese, translate it into English. If the word or sentence has multiple meanings, translate top three most used meanings."
         case .explain:
-            return "Explain the meaning of the following word or phrase in simple terms in English:\n\n"
+            return "Explain the meaning of the following word or phrase in simple terms in English."
         case .fixGrammar:
-            return "Fix the grammar and improve the writing of the following text. Only provide the corrected version without any additional explanation:\n\n"
+            return "Fix the grammar and improve the writing of the following text. Only provide the corrected version without any additional explanation."
         }
     }
 }
@@ -43,7 +46,7 @@ struct Message: Identifiable, Equatable {
 class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
     @Published var messages: [Message] = []
     @Published var availableModels: [String] = []
-    @Published var selectedModel: String = "gemma3:12b"
+    @Published var selectedModel: String = "qwen3:8b"
     @Published var selectedRole: AssistantRole = .translate {
         didSet {
             if oldValue != selectedRole {
@@ -57,6 +60,7 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
     private let ollamaBaseURL = "http://localhost:11434"
     private var currentTask: URLSessionDataTask?
     private var responseData = Data()
+    private var isProcessingThinkTag = false
     
     override init() {
         super.init()
@@ -70,15 +74,20 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
     private func buildPrompt(for content: String) -> String {
         switch selectedRole {
         case .chat:
-            // Build chat history
-            var chatHistory = selectedRole.prompt
-            for message in messages {
-                chatHistory += "\(message.isUser ? "User" : "Assistant"): \(message.content)\n\n"
+            // Build chat history for the main prompt field
+            var chatHistory = ""
+            for message in messages where message.id != messages.last?.id { // Exclude the latest assistant message placeholder
+                // Only include user messages and non-empty assistant messages in history
+                if message.isUser || !message.content.isEmpty {
+                   chatHistory += "\(message.isUser ? "User" : "Assistant"): \(message.content)\n\n"
+                }
             }
+            // Add the current user message
             chatHistory += "User: \(content)\n\nAssistant:"
             return chatHistory
         default:
-            return selectedRole.prompt + content
+            // For non-chat roles, the main prompt is just the user content
+            return content
         }
     }
     
@@ -100,7 +109,7 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
                 DispatchQueue.main.async {
                     self?.availableModels = response.models.map { $0.name }
                     if ((self?.availableModels.contains(self?.selectedModel ?? "")) == nil) {
-                        self?.selectedModel = self?.availableModels.first ?? "gemma3:12b"
+                        self?.selectedModel = self?.availableModels.first ?? "qwen3:8b"
                     }
                 }
             } catch {
@@ -144,6 +153,7 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
         isLoading = true
         errorMessage = nil
         responseData = Data()
+        isProcessingThinkTag = false
         
         guard let url = URL(string: "\(ollamaBaseURL)/api/generate") else { return }
         
@@ -152,7 +162,8 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let prompt = buildPrompt(for: content)
-        let body = OllamaRequest(model: selectedModel, prompt: prompt, stream: true)
+        let system = selectedRole.systemPrompt
+        let body = OllamaRequest(model: selectedModel, prompt: prompt, system: system, stream: true)
         request.httpBody = try? JSONEncoder().encode(body)
         
         let assistantMessage = Message(content: "", isUser: false)
@@ -165,18 +176,46 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
     
     // URLSessionDataDelegate methods
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        responseData.append(data)
-        
+        // Process data received chunk by chunk
         if let responseString = String(data: data, encoding: .utf8) {
             let lines = responseString.components(separatedBy: .newlines)
             for line in lines {
                 if line.isEmpty { continue }
                 if let jsonData = line.data(using: .utf8),
                    let response = try? JSONDecoder().decode(OllamaResponse.self, from: jsonData) {
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self = self, !self.messages.isEmpty else { return }
-                        let formattedResponse = self.formatMarkdown(response.response)
-                        self.messages[self.messages.count - 1].content += formattedResponse
+                    
+                    var chunk = response.response
+                    var contentToAppend = ""
+
+                    while !chunk.isEmpty {
+                        if isProcessingThinkTag {
+                            if let endTagRange = chunk.range(of: "</think>") {
+                                isProcessingThinkTag = false
+                                chunk = String(chunk[endTagRange.upperBound...])
+                            } else {
+                                // Entire remaining chunk is within think tags, discard
+                                chunk = ""
+                            }
+                        } else {
+                            if let startTagRange = chunk.range(of: "<think>") {
+                                contentToAppend += chunk[..<startTagRange.lowerBound]
+                                isProcessingThinkTag = true
+                                chunk = String(chunk[startTagRange.upperBound...])
+                            } else {
+                                // No start tag found, append the whole remaining chunk
+                                contentToAppend += chunk
+                                chunk = ""
+                            }
+                        }
+                    }
+
+                    if !contentToAppend.isEmpty {
+                        DispatchQueue.main.async { [weak self] in
+                            guard let self = self, !self.messages.isEmpty else { return }
+                            // Assuming formatMarkdown is still desired for the final content
+                            let formattedContent = self.formatMarkdown(contentToAppend)
+                            self.messages[self.messages.count - 1].content += formattedContent
+                        }
                     }
                 }
             }
@@ -186,8 +225,14 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         DispatchQueue.main.async {
             self.isLoading = false
+            self.isProcessingThinkTag = false
             if let error = error {
-                self.errorMessage = "Failed to send message: \(error.localizedDescription)"
+                if (error as NSError).code != NSURLErrorCancelled {
+                    self.errorMessage = "Failed to send message: \(error.localizedDescription)"
+                    if self.messages.last?.content.isEmpty == true && self.messages.last?.isUser == false {
+                        self.messages.removeLast()
+                    }
+                }
             }
         }
     }
@@ -205,6 +250,7 @@ struct OllamaModel: Codable {
 struct OllamaRequest: Codable {
     let model: String
     let prompt: String
+    let system: String?
     let stream: Bool
 }
 
