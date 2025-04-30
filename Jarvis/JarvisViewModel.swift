@@ -90,26 +90,6 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
         messages.removeAll()
     }
     
-    private func buildPrompt(for content: String) -> String {
-        switch selectedRole {
-        case .chat:
-            // Build chat history for the main prompt field
-            var chatHistory = ""
-            for message in messages where message.id != messages.last?.id { // Exclude the latest assistant message placeholder
-                // Only include user messages and non-empty assistant messages in history
-                if message.isUser || !message.content.isEmpty {
-                   chatHistory += "\(message.isUser ? "User" : "Assistant"): \(message.content)\n\n"
-                }
-            }
-            // Add the current user message
-            chatHistory += "User: \(content)\n\nAssistant:"
-            return chatHistory
-        default:
-            // For non-chat roles, the main prompt is just the user content
-            return content
-        }
-    }
-    
     func loadAvailableModels() {
         guard let url = URL(string: "\(ollamaBaseURL)/api/tags") else { return }
         
@@ -175,20 +155,52 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
         isProcessingThinkTag = false
         isDisplayingThinkingBlock = false
         
-        guard let url = URL(string: "\(ollamaBaseURL)/api/generate") else { return }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let prompt = buildPrompt(for: content)
-        let system = selectedRole.systemPrompt
-        let body = OllamaRequest(model: selectedModel, prompt: prompt, system: system, stream: true)
-        request.httpBody = try? JSONEncoder().encode(body)
-        
+        var request: URLRequest
+        var endpoint: String
+
+        if selectedRole == .chat {
+            endpoint = "\(ollamaBaseURL)/api/chat" // Use chat endpoint
+            guard let url = URL(string: endpoint) else { return }
+            request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            // Construct messages payload
+            var chatMessages: [ChatMessage] = []
+            if !selectedRole.systemPrompt.isEmpty {
+                 chatMessages.append(ChatMessage(role: "system", content: selectedRole.systemPrompt))
+            }
+            // Add history, excluding the empty assistant message placeholder
+            for message in messages where message.id != messages.last?.id {
+                if message.isUser || !message.content.isEmpty {
+                    chatMessages.append(ChatMessage(role: message.isUser ? "user" : "assistant", content: message.content))
+                }
+            }
+            // Add current user message
+            chatMessages.append(ChatMessage(role: "user", content: content))
+
+            let body = OllamaChatRequest(model: selectedModel, messages: chatMessages, stream: true)
+            request.httpBody = try? JSONEncoder().encode(body)
+
+        } else {
+            // Keep using /api/generate for non-chat roles
+            endpoint = "\(ollamaBaseURL)/api/generate"
+            guard let url = URL(string: endpoint) else { return }
+            request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            // For non-chat roles, prompt is just the content
+            let prompt = content
+            let system = selectedRole.systemPrompt
+            // Ensure OllamaRequest uses the optional prompt
+            let body = OllamaRequest(model: selectedModel, prompt: prompt, system: system, stream: true)
+            request.httpBody = try? JSONEncoder().encode(body)
+        }
+
         let assistantMessage = Message(content: "", isUser: false)
-        messages.append(assistantMessage)
-        
+        messages.append(assistantMessage) // Append placeholder for assistant response
+
         let session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
         currentTask = session.dataTask(with: request)
         currentTask?.resume()
@@ -196,15 +208,25 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
     
     // URLSessionDataDelegate methods
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        // Process data received chunk by chunk
         if let responseString = String(data: data, encoding: .utf8) {
             let lines = responseString.components(separatedBy: .newlines)
             for line in lines {
                 if line.isEmpty { continue }
-                if let jsonData = line.data(using: .utf8),
-                   let response = try? JSONDecoder().decode(OllamaResponse.self, from: jsonData) {
+                if let jsonData = line.data(using: .utf8) {
                     
-                    var chunk = response.response
+                    var chunk = ""
+                    // Try decoding as Chat response first
+                    if let chatResponse = try? JSONDecoder().decode(OllamaChatResponse.self, from: jsonData) {
+                        chunk = chatResponse.message.content
+                    // Fallback to Generate response
+                    } else if let generateResponse = try? JSONDecoder().decode(OllamaResponse.self, from: jsonData) {
+                         chunk = generateResponse.response
+                    } else {
+                        // Handle potential decoding errors or unexpected format
+                        print("Failed to decode Ollama response line: \(line)")
+                        continue
+                    }
+
                     var contentToAppend = ""
 
                     while !chunk.isEmpty {
@@ -244,9 +266,8 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
 
                     if !contentToAppend.isEmpty {
                         DispatchQueue.main.async { [weak self] in
-                            guard let self = self, !self.messages.isEmpty else { return }
-                            let formattedContent = self.formatMarkdown(contentToAppend)
-                            self.messages[self.messages.count - 1].content += formattedContent
+                            guard let self = self, let lastIndex = self.messages.indices.last, !self.messages.isEmpty, !self.messages[lastIndex].isUser else { return }
+                            self.messages[lastIndex].content += contentToAppend
                         }
                     }
                 }
@@ -280,13 +301,31 @@ struct OllamaModel: Codable {
     let name: String
 }
 
+struct ChatMessage: Codable {
+    let role: String // "system", "user", or "assistant"
+    let content: String
+}
+
+struct OllamaChatRequest: Codable {
+    let model: String
+    let messages: [ChatMessage]
+    let stream: Bool
+}
+
 struct OllamaRequest: Codable {
     let model: String
-    let prompt: String
+    let prompt: String? // Make prompt optional
     let system: String?
     let stream: Bool
 }
 
 struct OllamaResponse: Codable {
     let response: String
+}
+
+struct OllamaChatResponse: Codable {
+    let model: String
+    let created_at: String
+    let message: ChatMessage
+    let done: Bool
 } 
