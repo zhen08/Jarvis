@@ -22,13 +22,31 @@ enum AssistantRole: String, CaseIterable {
             // Using an empty system prompt for chat for now, 
             // history is managed in the main prompt.
             // Alternatively, provide a base persona here.
-            return "You are a helpful AI assistant." 
+            return """
+            You are Jarvis, a helpful AI assistant. You are a highly capable, thoughtful, and precise assistant. 
+            Your goal is to deeply understand the user's intent, ask clarifying questions when needed, think 
+            step-by-step through complex problems, provide clear and accurate answers, and proactively 
+            anticipate helpful follow-up information. Always prioritize being truthful, nuanced, insightful, 
+            and efficient, tailoring your responses specifically to the user's needs and preferences.
+            """
         case .translate:
-            return "Do not reason. You are a translator. If the following word or sentence is in English, translate it into Chinese. If the word or sentence is in Chinese, translate it into English. If the word or sentence has multiple meanings, translate top three most used meanings."
+            return """
+            You are a translator. If the following word or sentence is in English, translate it into Chinese. 
+            If the word or sentence is in Chinese, translate it into English. If the word or sentence has multiple meanings, 
+            translate top three most used meanings.
+            Do not reason. Do not provide any additional information.
+            """
         case .explain:
-            return "Explain the meaning of the following word or phrase in simple terms in English."
+            return """
+            Explain the meaning of the following word or phrase in simple terms and use simple words in English. 
+            Do not reason. Do not provide any additional information.
+            """
         case .fixGrammar:
-            return "Fix the grammar and improve the writing of the following text. Only provide the corrected version without any additional explanation."
+            return """
+            You are a proofreader. Fix the grammar and improve the writing of the following text. 
+            Only provide the corrected version without any additional explanation.
+            Do not reason. Do not provide any additional information.
+            """
         }
     }
 }
@@ -61,6 +79,7 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
     private var currentTask: URLSessionDataTask?
     private var responseData = Data()
     private var isProcessingThinkTag = false
+    private var isDisplayingThinkingBlock = false
     
     override init() {
         super.init()
@@ -154,6 +173,7 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
         errorMessage = nil
         responseData = Data()
         isProcessingThinkTag = false
+        isDisplayingThinkingBlock = false
         
         guard let url = URL(string: "\(ollamaBaseURL)/api/generate") else { return }
         
@@ -190,19 +210,32 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
                     while !chunk.isEmpty {
                         if isProcessingThinkTag {
                             if let endTagRange = chunk.range(of: "</think>") {
+                                let thinkingContent = chunk[..<endTagRange.lowerBound]
+                                if isDisplayingThinkingBlock {
+                                    contentToAppend += thinkingContent
+                                    contentToAppend += "💭"
+                                    isDisplayingThinkingBlock = false
+                                }
                                 isProcessingThinkTag = false
                                 chunk = String(chunk[endTagRange.upperBound...])
                             } else {
-                                // Entire remaining chunk is within think tags, discard
+                                if isDisplayingThinkingBlock {
+                                    contentToAppend += chunk
+                                }
                                 chunk = ""
                             }
                         } else {
                             if let startTagRange = chunk.range(of: "<think>") {
                                 contentToAppend += chunk[..<startTagRange.lowerBound]
                                 isProcessingThinkTag = true
+                                
+                                if self.selectedRole == .chat {
+                                    isDisplayingThinkingBlock = true
+                                    contentToAppend += "💭"
+                                }
+                                
                                 chunk = String(chunk[startTagRange.upperBound...])
                             } else {
-                                // No start tag found, append the whole remaining chunk
                                 contentToAppend += chunk
                                 chunk = ""
                             }
@@ -212,7 +245,6 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
                     if !contentToAppend.isEmpty {
                         DispatchQueue.main.async { [weak self] in
                             guard let self = self, !self.messages.isEmpty else { return }
-                            // Assuming formatMarkdown is still desired for the final content
                             let formattedContent = self.formatMarkdown(contentToAppend)
                             self.messages[self.messages.count - 1].content += formattedContent
                         }
@@ -226,6 +258,7 @@ class JarvisViewModel: NSObject, ObservableObject, URLSessionDataDelegate {
         DispatchQueue.main.async {
             self.isLoading = false
             self.isProcessingThinkTag = false
+            self.isDisplayingThinkingBlock = false
             if let error = error {
                 if (error as NSError).code != NSURLErrorCancelled {
                     self.errorMessage = "Failed to send message: \(error.localizedDescription)"
