@@ -11,6 +11,7 @@
 		1A1A1A1A1A1A1A1A1A1A1A1C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A1A1A1A1A1A1A1A1A1A1D /* ContentView.swift */; };
 		1A1A1A1A1A1A1A1A1A1A1A1E /* JarvisViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A1A1A1A1A1A1A1A1A1A1F /* JarvisViewModel.swift */; };
 		1A1A1A1A1A1A1A1A1A1A1A2F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A1A1A1A1A1A1A1A1A1A1A2E /* Assets.xcassets */; };
+		6F2613F32DE03F8700F11ACE /* OllamaKit in Frameworks */ = {isa = PBXBuildFile; productRef = 6F2613F22DE03F8700F11ACE /* OllamaKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6F2613F32DE03F8700F11ACE /* OllamaKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -108,6 +110,9 @@
 				Base,
 			);
 			mainGroup = 1A1A1A1A1A1A1A1A1A1A1A30 /* Project */;
+			packageReferences = (
+				6F2613F12DE03F8700F11ACE /* XCRemoteSwiftPackageReference "OllamaKit" */,
+			);
 			productRefGroup = 1A1A1A1A1A1A1A1A1A1A1A28 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -322,6 +327,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6F2613F12DE03F8700F11ACE /* XCRemoteSwiftPackageReference "OllamaKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kevinhermawan/OllamaKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.8;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6F2613F22DE03F8700F11ACE /* OllamaKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6F2613F12DE03F8700F11ACE /* XCRemoteSwiftPackageReference "OllamaKit" */;
+			productName = OllamaKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 1A1A1A1A1A1A1A1A1A1A1A26 /* Project object */;
 }

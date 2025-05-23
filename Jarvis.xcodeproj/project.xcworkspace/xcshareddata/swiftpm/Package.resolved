@@ -1,0 +1,15 @@
+{
+  "originHash" : "2a6dd4690782eafea32e6e7295c65202dfd26738f2ea7ea9dea09c65b0d93057",
+  "pins" : [
+    {
+      "identity" : "ollamakit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/kevinhermawan/OllamaKit.git",
+      "state" : {
+        "revision" : "b6ff6a0c75a3756450cfb38074f6264be1314abc",
+        "version" : "5.0.8"
+      }
+    }
+  ],
+  "version" : 3
+}
