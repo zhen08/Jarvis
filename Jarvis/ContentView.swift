@@ -54,16 +54,56 @@ struct ContentView: View {
             // Input Area
             VStack(spacing: 0) {
                 Divider()
+                
+                // Selected Images Preview (only show in chat mode when images are selected)
+                if viewModel.selectedRole == .chat && !viewModel.selectedImages.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(viewModel.selectedImages) { image in
+                                SelectedImageView(image: image) {
+                                    viewModel.removeSelectedImage(image)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                    }
+                    .background(Color(.controlBackgroundColor))
+                    Divider()
+                }
+                
                 HStack(alignment: .bottom, spacing: 12) {
-                    CustomTextEditor(text: $messageText, onCommandReturn: {
-                        let message = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard !message.isEmpty else { return }
-                        messageText = ""
-                        viewModel.sendMessage(message)
-                    })
-                    .padding(0.0)
-                    .frame(height: 80)
-                    .focused($isEditorFocused)
+                    VStack(spacing: 0) {
+                        CustomTextEditor(text: $messageText, onCommandReturn: {
+                            let message = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard !message.isEmpty else { return }
+                            messageText = ""
+                            viewModel.sendMessage(message)
+                        })
+                        .padding(0.0)
+                        .frame(height: 80)
+                        .focused($isEditorFocused)
+                        
+                        // Image attachment button (only show in chat mode)
+                        if viewModel.selectedRole == .chat {
+                            HStack {
+                                Button(action: {
+                                    viewModel.selectImages()
+                                }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "photo")
+                                        Text("Attach Images")
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.top, 4)
+                                
+                                Spacer()
+                            }
+                        }
+                    }
                     
                     VStack(spacing: 12) {
                         Button(action: {
@@ -111,6 +151,41 @@ struct ContentView: View {
             window.center()
             appDelegate.setMainWindow(window)
         })
+    }
+}
+
+struct SelectedImageView: View {
+    let image: AttachedImage
+    let onRemove: () -> Void
+    
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            if let nsImage = NSImage(data: image.data) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 60, height: 60)
+                    .cornerRadius(8)
+                    .clipped()
+            } else {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 60, height: 60)
+                    .overlay(
+                        Image(systemName: "photo")
+                            .foregroundColor(.gray)
+                    )
+            }
+            
+            Button(action: onRemove) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.white)
+                    .background(Color.black.opacity(0.6))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .offset(x: 5, y: -5)
+        }
     }
 }
 
@@ -214,13 +289,32 @@ struct MessageBubble: View {
                 Spacer()
             }
             
-            VStack(alignment: message.isUser ? .trailing : .leading) {
-                Text(try! AttributedString(markdown: message.content, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
-                    .textSelection(.enabled)
-                    .padding(16)
-                    .background(message.isUser ? Color.accentColor : Color(.controlBackgroundColor))
-                    .foregroundColor(message.isUser ? .white : .primary)
-                    .cornerRadius(16)
+            VStack(alignment: message.isUser ? .trailing : .leading, spacing: 12) {
+                // Display attached images if any
+                if !message.attachedImages.isEmpty {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: min(3, message.attachedImages.count)), spacing: 8) {
+                        ForEach(message.attachedImages) { attachedImage in
+                            if let nsImage = NSImage(data: attachedImage.data) {
+                                Image(nsImage: nsImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(maxWidth: 200, maxHeight: 200)
+                                    .cornerRadius(12)
+                                    .clipped()
+                            }
+                        }
+                    }
+                }
+                
+                // Display text content if not empty
+                if !message.content.isEmpty {
+                    Text(try! AttributedString(markdown: message.content, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
+                        .textSelection(.enabled)
+                        .padding(16)
+                        .background(message.isUser ? Color.accentColor : Color(.controlBackgroundColor))
+                        .foregroundColor(message.isUser ? .white : .primary)
+                        .cornerRadius(16)
+                }
             }
             .frame(maxWidth: 700, alignment: message.isUser ? .trailing : .leading)
             

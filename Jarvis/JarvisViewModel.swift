@@ -52,13 +52,24 @@ enum AssistantRole: String, CaseIterable {
     }
 }
 
+struct AttachedImage: Identifiable, Equatable {
+    let id = UUID()
+    let data: Data
+    let fileName: String
+    
+    static func == (lhs: AttachedImage, rhs: AttachedImage) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
 struct Message: Identifiable, Equatable {
     let id = UUID()
     var content: String
     let isUser: Bool
+    var attachedImages: [AttachedImage] = []
     
     static func == (lhs: Message, rhs: Message) -> Bool {
-        lhs.id == rhs.id && lhs.content == rhs.content && lhs.isUser == rhs.isUser
+        lhs.id == rhs.id && lhs.content == rhs.content && lhs.isUser == rhs.isUser && lhs.attachedImages == rhs.attachedImages
     }
 }
 
@@ -75,6 +86,7 @@ class JarvisViewModel: ObservableObject {
     }
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var selectedImages: [AttachedImage] = []
     
     private let ollamaKit: OllamaKit
     private var streamTask: Task<Void, Never>?
@@ -89,6 +101,28 @@ class JarvisViewModel: ObservableObject {
     
     func clearMessages() {
         messages.removeAll()
+        selectedImages.removeAll()
+    }
+    
+    func selectImages() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = [.image]
+        panel.title = "Select Images"
+        
+        if panel.runModal() == .OK {
+            let newImages = panel.urls.compactMap { url -> AttachedImage? in
+                guard let data = try? Data(contentsOf: url) else { return nil }
+                return AttachedImage(data: data, fileName: url.lastPathComponent)
+            }
+            selectedImages.append(contentsOf: newImages)
+        }
+    }
+    
+    func removeSelectedImage(_ image: AttachedImage) {
+        selectedImages.removeAll { $0.id == image.id }
     }
     
     func loadAvailableModels() {
@@ -139,8 +173,11 @@ class JarvisViewModel: ObservableObject {
         // Cancel any existing stream task
         streamTask?.cancel()
         
-        let userMessage = Message(content: content, isUser: true)
+        let userMessage = Message(content: content, isUser: true, attachedImages: selectedImages)
         messages.append(userMessage)
+        
+        // Clear selected images after sending
+        selectedImages.removeAll()
         
         isLoading = true
         errorMessage = nil
@@ -166,12 +203,32 @@ class JarvisViewModel: ObservableObject {
                     for message in messages where message.id != messages.last?.id {
                         if message.isUser || !message.content.isEmpty {
                             let role: OKChatRequestData.Message.Role = message.isUser ? .user : .assistant
-                            chatMessages.append(OKChatRequestData.Message(role: role, content: message.content))
+                            
+                            // For user messages with images, include them in the images field
+                            if message.isUser && !message.attachedImages.isEmpty {
+                                let imageData = message.attachedImages.map { $0.data.base64EncodedString() }
+                                chatMessages.append(OKChatRequestData.Message(
+                                    role: role,
+                                    content: message.content,
+                                    images: imageData
+                                ))
+                            } else {
+                                chatMessages.append(OKChatRequestData.Message(role: role, content: message.content))
+                            }
                         }
                     }
                     
-                    // Add current user message
-                    chatMessages.append(OKChatRequestData.Message(role: .user, content: content))
+                    // Add current user message with images if any
+                    if !userMessage.attachedImages.isEmpty {
+                        let imageData = userMessage.attachedImages.map { $0.data.base64EncodedString() }
+                        chatMessages.append(OKChatRequestData.Message(
+                            role: .user,
+                            content: content,
+                            images: imageData
+                        ))
+                    } else {
+                        chatMessages.append(OKChatRequestData.Message(role: .user, content: content))
+                    }
                     
                     let data = OKChatRequestData(
                         model: selectedModel,
