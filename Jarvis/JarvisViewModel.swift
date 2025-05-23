@@ -32,9 +32,9 @@ enum AssistantRole: String, CaseIterable {
             """
         case .translate:
             return """
-            You are a translator. If the following word or sentence is in English, translate it into Chinese. 
-            If the word or sentence is in Chinese, translate it into English. If the word or sentence has multiple meanings, 
-            translate top three most used meanings.
+            You are a translator. If the word or sentence is in Chinese, translate it into English. 
+            If the following word or sentence is in English or other languages, translate it into Chinese. 
+            If the word or sentence has multiple meanings, translate the top three most used meanings.
             Do not reason. Do not provide any additional information.
             """
         case .explain:
