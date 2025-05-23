@@ -35,8 +35,32 @@ enum AssistantRole: String, CaseIterable {
             You are a translator. If the word or sentence is in Chinese, translate it into English. 
             If the following word or sentence is in English or other languages, translate it into Chinese. 
             If the word or sentence has multiple meanings, translate the top three most used meanings.
-            Also, show a brief explanation of the word or sentence in English and Chinese.
+            Also, show a brief explanation of the word or sentence in both English and Chinese.
             Do not reason. Do not provide any additional information.
+            
+            Below are two examples, always follow the format:
+            --Example 1--
+            Input: 你好
+            Output:
+            1. Hello
+            2. Hi
+            3. How do you do
+            
+            Explanation: A common greeting in Chinese.
+            
+            中文解释: 中文里常用的问候语。
+            --End of Example 1--
+            --Example 2--
+            Input: apple
+            Output:
+            1. 苹果
+            2. 苹果公司（Apple Inc.，如有歧义）
+            3. 苹果树的果实
+
+            Explanation: A round fruit with red or green skin and a whitish interior.
+            
+            中文解释: 一种圆形的水果，外皮为红色或绿色，果肉为白色。
+            --End of Example 2--
             """
         case .explain:
             return """
@@ -77,7 +101,7 @@ struct Message: Identifiable, Equatable {
 class JarvisViewModel: ObservableObject {
     @Published var messages: [Message] = []
     @Published var availableModels: [String] = []
-    @Published var selectedModel: String = "qwen3:1.7b-q8_0"
+    @Published var selectedModel: String = "gemma3:4b-it-qat"
     @Published var selectedRole: AssistantRole = .translate {
         didSet {
             if oldValue != selectedRole {
@@ -85,7 +109,7 @@ class JarvisViewModel: ObservableObject {
                 // Set default model based on role
                 switch selectedRole {
                 case .translate:
-                    selectedModel = "qwen3:1.7b-q8_0"
+                    selectedModel = "gemma3:4b-it-qat"
                 default:
                     selectedModel = "qwen3:32b-fp16"
                 }
@@ -107,7 +131,7 @@ class JarvisViewModel: ObservableObject {
         // Set initial model based on initial role
         switch selectedRole {
         case .translate:
-            self.selectedModel = "qwen3:1.7b-q8_0"
+            self.selectedModel = "gemma3:4b-it-qat"
         default:
             self.selectedModel = "qwen3:32b-fp16"
         }
@@ -147,7 +171,7 @@ class JarvisViewModel: ObservableObject {
                 await MainActor.run {
                     self.availableModels = modelsResponse.models.map { $0.name }
                     if !self.availableModels.contains(self.selectedModel) {
-                        self.selectedModel = self.availableModels.first ?? "qwen3:8b"
+                        self.selectedModel = self.availableModels.first ?? "gemma3:4b-it-qat"
                     }
                 }
             } catch {
@@ -184,6 +208,11 @@ class JarvisViewModel: ObservableObject {
     
     func sendMessage(_ content: String) {
         guard !content.isEmpty else { return }
+        
+        // Always clear history in translate mode
+        if selectedRole == .translate {
+            clearMessages()
+        }
         
         // Cancel any existing stream task
         streamTask?.cancel()
