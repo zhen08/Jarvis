@@ -35,6 +35,7 @@ enum AssistantRole: String, CaseIterable {
             You are a translator. If the word or sentence is in Chinese, translate it into English. 
             If the following word or sentence is in English or other languages, translate it into Chinese. 
             If the word or sentence has multiple meanings, translate the top three most used meanings.
+            Also, show a brief explanation of the word or sentence in English and Chinese.
             Do not reason. Do not provide any additional information.
             """
         case .explain:
@@ -76,11 +77,18 @@ struct Message: Identifiable, Equatable {
 class JarvisViewModel: ObservableObject {
     @Published var messages: [Message] = []
     @Published var availableModels: [String] = []
-    @Published var selectedModel: String = "qwen3:8b"
+    @Published var selectedModel: String = "qwen3:1.7b-q8_0"
     @Published var selectedRole: AssistantRole = .translate {
         didSet {
             if oldValue != selectedRole {
                 clearMessages()
+                // Set default model based on role
+                switch selectedRole {
+                case .translate:
+                    selectedModel = "qwen3:1.7b-q8_0"
+                default:
+                    selectedModel = "qwen3:32b-fp16"
+                }
             }
         }
     }
@@ -96,6 +104,13 @@ class JarvisViewModel: ObservableObject {
     init() {
         // Initialize OllamaKit with default localhost URL
         self.ollamaKit = OllamaKit(baseURL: URL(string: "http://localhost:11434")!)
+        // Set initial model based on initial role
+        switch selectedRole {
+        case .translate:
+            self.selectedModel = "qwen3:1.7b-q8_0"
+        default:
+            self.selectedModel = "qwen3:32b-fp16"
+        }
         loadAvailableModels()
     }
     
