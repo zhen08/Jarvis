@@ -5,14 +5,12 @@ import OllamaKit
 enum AssistantRole: String, CaseIterable {
     case chat = "General Chat"
     case translate = "Translate"
-    case explain = "Explain"
     case fixGrammar = "Fix Grammar"
     
     var shortcut: KeyEquivalent {
         switch self {
         case .chat: return "g"
         case .translate: return "t"
-        case .explain: return "e"
         case .fixGrammar: return "f"
         }
     }
@@ -56,16 +54,11 @@ enum AssistantRole: String, CaseIterable {
             1. 苹果
             2. 苹果公司（Apple Inc.，如有歧义）
             3. 苹果树的果实
-
+            
             Explanation: A round fruit with red or green skin and a whitish interior.
             
             中文解释: 一种圆形的水果，外皮为红色或绿色，果肉为白色。
             --End of Example 2--
-            """
-        case .explain:
-            return """
-            Explain the meaning of the following word or phrase in simple terms and use simple words in English. 
-            Do not reason. Do not provide any additional information.
             """
         case .fixGrammar:
             return """
