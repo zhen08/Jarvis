@@ -281,13 +281,15 @@ class JarvisViewModel: ObservableObject {
                     }
                 } else {
                     // Use generate endpoint for non-chat roles
-                    // Combine system prompt with user content for non-chat roles
-                    let fullPrompt = selectedRole.systemPrompt.isEmpty ? content : "\(selectedRole.systemPrompt)\n\n\(content)"
-                    
-                    let data = OKGenerateRequestData(
+                    var data = OKGenerateRequestData(
                         model: selectedModel,
-                        prompt: fullPrompt
+                        prompt: content
                     )
+                    
+                    // Set system prompt if available
+                    if !selectedRole.systemPrompt.isEmpty {
+                        data.system = selectedRole.systemPrompt
+                    }
                     
                     for try await response in ollamaKit.generate(data: data) {
                         guard !Task.isCancelled else { break }
