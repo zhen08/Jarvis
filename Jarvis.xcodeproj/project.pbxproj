@@ -12,6 +12,7 @@
 		1A1A1A1A1A1A1A1A1A1A1A1E /* JarvisViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A1A1A1A1A1A1A1A1A1A1F /* JarvisViewModel.swift */; };
 		1A1A1A1A1A1A1A1A1A1A1A2F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A1A1A1A1A1A1A1A1A1A1A2E /* Assets.xcassets */; };
 		6F2613F32DE03F8700F11ACE /* OllamaKit in Frameworks */ = {isa = PBXBuildFile; productRef = 6F2613F22DE03F8700F11ACE /* OllamaKit */; };
+		6FFB643B2DE58D7900DC207C /* Prompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FFB643A2DE58D7900DC207C /* Prompts.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,6 +23,7 @@
 		1A1A1A1A1A1A1A1A1A1A1A2E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1A1A1A1A1A1A1A1A1A1A1A34 /* Jarvis.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Jarvis.entitlements; sourceTree = "<group>"; };
 		6F807C1F2D9AB0400051DCFF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		6FFB643A2DE58D7900DC207C /* Prompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Prompts.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -43,6 +45,7 @@
 				1A1A1A1A1A1A1A1A1A1A1A1B /* JarvisApp.swift */,
 				1A1A1A1A1A1A1A1A1A1A1A1D /* ContentView.swift */,
 				1A1A1A1A1A1A1A1A1A1A1A1F /* JarvisViewModel.swift */,
+				6FFB643A2DE58D7900DC207C /* Prompts.swift */,
 				1A1A1A1A1A1A1A1A1A1A1A2E /* Assets.xcassets */,
 				1A1A1A1A1A1A1A1A1A1A1A34 /* Jarvis.entitlements */,
 			);
@@ -139,6 +142,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A1A1A1A1A1A1A1A1A1A1A1A /* JarvisApp.swift in Sources */,
+				6FFB643B2DE58D7900DC207C /* Prompts.swift in Sources */,
 				1A1A1A1A1A1A1A1A1A1A1A1C /* ContentView.swift in Sources */,
 				1A1A1A1A1A1A1A1A1A1A1A1E /* JarvisViewModel.swift in Sources */,
 			);
