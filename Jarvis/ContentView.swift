@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct ContentView: View {
     @StateObject private var viewModel = JarvisViewModel()
@@ -8,125 +9,20 @@ struct ContentView: View {
     @FocusState private var isEditorFocused: Bool
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Model and Role Selection
-            HStack(spacing: 20.0) {
-                Picker("Model", selection: $viewModel.selectedModel) {
-                    ForEach(viewModel.availableModels, id: \.self) { model in
-                        Text(model).tag(model)
-                    }
-                }
-                .frame(width: 250)
-                
-                Picker("Role", selection: $viewModel.selectedRole) {
-                    ForEach(AssistantRole.allCases, id: \.self) { role in
-                        Text(role.rawValue)
-                            .tag(role)
-                            .keyboardShortcut(role.shortcut, modifiers: .command)
-                    }
-                }
-                .frame(width: 150)
-            }
-            .padding(2.0)
-            .background(Color(.windowBackgroundColor))
-            
-            // Chat Messages
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(viewModel.messages) { message in
-                            MessageBubble(message: message)
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 16)
-                }
-                .background(Color(.textBackgroundColor))
-                .onChange(of: viewModel.messages) { messages, _ in
-                    if let lastMessage = messages.last {
-                        withAnimation {
-                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                        }
-                    }
-                }
-            }
-            
-            // Input Area
+        mainContent
+    }
+
+    private var mainContent: some View {
+        ZStack {
             VStack(spacing: 0) {
-                Divider()
-                
-                // Selected Images Preview (only show in chat mode when images are selected)
-                if viewModel.selectedRole == .chat && !viewModel.selectedImages.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(viewModel.selectedImages) { image in
-                                SelectedImageView(image: image) {
-                                    viewModel.removeSelectedImage(image)
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                    }
-                    .background(Color(.controlBackgroundColor))
-                    Divider()
-                }
-                
-                HStack(alignment: .bottom, spacing: 12) {
-                    VStack(spacing: 0) {
-                        CustomTextEditor(text: $messageText, onCommandReturn: {
-                            let message = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-                            guard !message.isEmpty else { return }
-                            messageText = ""
-                            viewModel.sendMessage(message)
-                        })
-                        .padding(0.0)
-                        .frame(height: 80)
-                        .focused($isEditorFocused)
-                        
-                        // Image attachment button (only show in chat mode)
-                        if viewModel.selectedRole == .chat {
-                            HStack {
-                                Button(action: {
-                                    viewModel.selectImages()
-                                }) {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "photo")
-                                        Text("Attach Images")
-                                    }
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                                .padding(.top, 4)
-                                
-                                Spacer()
-                            }
-                        }
-                    }
-                    
-                    VStack(spacing: 12) {
-                        Button(action: {
-                            let message = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-                            guard !message.isEmpty else { return }
-                            messageText = ""
-                            viewModel.sendMessage(message)
-                        }) {
-                            Image(systemName: "arrow.up.circle.fill")
-                                .font(.system(size: 28))
-                        }
-                        .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
-                        
-                        Button(action: { viewModel.clearMessages() }) {
-                            Image(systemName: "trash.circle.fill")
-                                .font(.system(size: 28))
-                                .foregroundColor(.red)
-                        }
-                        .help("Clear chat history")
-                    }
-                }
-                .padding(10.0)
+                topBar
+                chatMessages
+                inputArea
             }
+            .background(
+                LinearGradient(gradient: Gradient(colors: [Color.gray.opacity(0.12), Color.gray.opacity(0.22)]), startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .ignoresSafeArea()
+            )
         }
         .frame(minWidth: 800, minHeight: 600)
         .onChange(of: viewModel.errorMessage) { _, error in
@@ -152,6 +48,151 @@ struct ContentView: View {
             appDelegate.setMainWindow(window)
         })
     }
+
+    private var topBar: some View {
+        HStack(spacing: 20.0) {
+            Picker("Model", selection: $viewModel.selectedModel) {
+                ForEach(viewModel.availableModels, id: \.self) { model in
+                    Text(model).tag(model)
+                }
+            }
+            .frame(width: 250)
+            .font(.headline)
+            Picker("Role", selection: $viewModel.selectedRole) {
+                ForEach(AssistantRole.allCases, id: \.self) { role in
+                    Text(role.rawValue)
+                        .tag(role)
+                        .keyboardShortcut(role.shortcut, modifiers: .command)
+                }
+            }
+            .frame(width: 150)
+            .font(.headline)
+        }
+        .padding(8.0)
+        .background(BlurView(style: .contentBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.top, 12)
+        .padding(.horizontal, 16)
+    }
+
+    private var chatMessages: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 24) {
+                    ForEach(viewModel.messages) { message in
+                        MessageBubble(message: message)
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 16)
+            }
+            .background(Color.clear)
+            .onChange(of: viewModel.messages) { messages, _ in
+                if let lastMessage = messages.last {
+                    withAnimation {
+                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                    }
+                }
+            }
+        }
+    }
+
+    private var inputArea: some View {
+        VStack(spacing: 0) {
+            Divider()
+            imagePreview
+            HStack(alignment: .bottom, spacing: 12) {
+                textEditorAndAttachButton
+                sendAndClearButtons
+            }
+            .padding(10.0)
+            .background(BlurView(style: .contentBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
+        }
+    }
+
+    private var imagePreview: some View {
+        Group {
+            if viewModel.selectedRole == .chat && !viewModel.selectedImages.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(viewModel.selectedImages) { image in
+                            SelectedImageView(image: image) {
+                                viewModel.removeSelectedImage(image)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                }
+                .background(Color(NSColor.windowBackgroundColor).opacity(0.7))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .padding(.horizontal, 8)
+                Divider()
+            }
+        }
+    }
+
+    private var textEditorAndAttachButton: some View {
+        VStack(spacing: 0) {
+            CustomTextEditor(text: $messageText, onCommandReturn: {
+                let message = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !message.isEmpty else { return }
+                messageText = ""
+                viewModel.sendMessage(message)
+            })
+            .padding(10)
+            .background(Color(NSColor.windowBackgroundColor).opacity(0.9))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+            .frame(height: 80)
+            .focused($isEditorFocused)
+            if viewModel.selectedRole == .chat {
+                HStack {
+                    Button(action: {
+                        viewModel.selectImages()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "photo")
+                            Text("Attach Images")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
+                    Spacer()
+                }
+            }
+        }
+    }
+
+    private var sendAndClearButtons: some View {
+        VStack(spacing: 12) {
+            Button(action: {
+                let message = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !message.isEmpty else { return }
+                messageText = ""
+                viewModel.sendMessage(message)
+            }) {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.accentColor)
+                    .shadow(color: Color.accentColor.opacity(0.3), radius: 6, x: 0, y: 2)
+            }
+            .buttonStyle(.plain)
+            .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
+            Button(action: { viewModel.clearMessages() }) {
+                Image(systemName: "trash.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(.red)
+            }
+            .help("Clear chat history")
+        }
+    }
 }
 
 struct SelectedImageView: View {
@@ -165,10 +206,15 @@ struct SelectedImageView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 60, height: 60)
-                    .cornerRadius(8)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.accentColor, lineWidth: 2)
+                    )
+                    .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 2)
                     .clipped()
             } else {
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(Color.gray.opacity(0.3))
                     .frame(width: 60, height: 60)
                     .overlay(
@@ -299,7 +345,8 @@ struct MessageBubble: View {
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
                                     .frame(maxWidth: 200, maxHeight: 200)
-                                    .cornerRadius(12)
+                                    .cornerRadius(16)
+                                    .shadow(color: Color.black.opacity(0.10), radius: 6, x: 0, y: 2)
                                     .clipped()
                             }
                         }
@@ -310,10 +357,13 @@ struct MessageBubble: View {
                 if !message.content.isEmpty {
                     Text(try! AttributedString(markdown: message.content, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
                         .textSelection(.enabled)
-                        .padding(16)
-                        .background(message.isUser ? Color.accentColor : Color(.controlBackgroundColor))
+                        .padding(18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(message.isUser ? Color.accentColor : Color(NSColor.windowBackgroundColor).opacity(0.85))
+                                .shadow(color: Color.black.opacity(0.10), radius: 8, x: 0, y: 2)
+                        )
                         .foregroundColor(message.isUser ? .white : .primary)
-                        .cornerRadius(16)
                 }
             }
             .frame(maxWidth: 700, alignment: message.isUser ? .trailing : .leading)
@@ -322,10 +372,23 @@ struct MessageBubble: View {
                 Spacer()
             }
         }
+        .padding(.horizontal, 2)
     }
 }
 
 #Preview {
     ContentView()
         .environmentObject(AppDelegate())
+}
+
+struct BlurView: NSViewRepresentable {
+    var style: NSVisualEffectView.Material
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = style
+        view.blendingMode = .behindWindow
+        view.state = .active
+        return view
+    }
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 } 
