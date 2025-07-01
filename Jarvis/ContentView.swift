@@ -324,6 +324,13 @@ class CustomNSTextView: NSTextView {
         }
         super.keyDown(with: event)
     }
+
+    override func paste(_ sender: Any?) {
+        if let pasteboardString = NSPasteboard.general.string(forType: .string) {
+            self.insertText(pasteboardString, replacementRange: self.selectedRange())
+        }
+        // Do not call super.paste to prevent rich text or other formats from being pasted
+    }
 }
 
 struct MessageBubble: View {
