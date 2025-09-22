@@ -6,7 +6,7 @@ enum AssistantRole: String, CaseIterable {
     case chat = "General Chat"
     case translate = "Translate"
     case fixGrammar = "Fix Grammar"
-    
+
     var shortcut: KeyEquivalent {
         switch self {
         case .chat: return "g"
@@ -14,7 +14,15 @@ enum AssistantRole: String, CaseIterable {
         case .fixGrammar: return "f"
         }
     }
-    
+
+    var iconName: String {
+        switch self {
+        case .chat: return "sparkles"
+        case .translate: return "globe"
+        case .fixGrammar: return "textformat.abc"
+        }
+    }
+
     var systemPrompt: String {
         switch self {
         case .chat:
@@ -23,6 +31,51 @@ enum AssistantRole: String, CaseIterable {
             return Prompts.translate
         case .fixGrammar:
             return Prompts.fixGrammar
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .chat:
+            return "Have natural conversations, brainstorm ideas, or get quick answers."
+        case .translate:
+            return "Translate snippets or entire documents to another language instantly."
+        case .fixGrammar:
+            return "Polish your writing with grammar fixes and tone improvements."
+        }
+    }
+
+    var quickTips: [String] {
+        switch self {
+        case .chat:
+            return [
+                "Attach reference images for visual context",
+                "Ask follow-up questions to refine answers",
+                "Use Command+Enter to send without leaving the keyboard"
+            ]
+        case .translate:
+            return [
+                "Specify the target language for accurate translations",
+                "Paste large blocks of text—Jarvis keeps the formatting",
+                "Send another message to translate into a different language"
+            ]
+        case .fixGrammar:
+            return [
+                "Paste drafts to get grammar and clarity suggestions",
+                "Mention the tone you want to achieve (e.g., formal, friendly)",
+                "Jarvis keeps your original meaning while polishing the text"
+            ]
+        }
+    }
+
+    var composerPlaceholder: String {
+        switch self {
+        case .chat:
+            return "Ask Jarvis anything or drop images for more context..."
+        case .translate:
+            return "Paste text you would like translated..."
+        case .fixGrammar:
+            return "Paste text that needs proofreading or tone adjustments..."
         }
     }
 }
@@ -112,6 +165,10 @@ class JarvisViewModel: ObservableObject {
     
     func removeSelectedImage(_ image: AttachedImage) {
         selectedImages.removeAll { $0.id == image.id }
+    }
+
+    func clearSelectedImages() {
+        selectedImages.removeAll()
     }
     
     func loadAvailableModels() {

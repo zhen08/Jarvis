@@ -49,30 +49,104 @@ struct ContentView: View {
         })
     }
 
-    private var topBar: some View {
-        HStack(spacing: 20.0) {
-            Picker("Model", selection: $viewModel.selectedModel) {
-                ForEach(viewModel.availableModels, id: \.self) { model in
-                    Text(model).tag(model)
-                }
+    private var trimmedMessage: String {
+        messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isSendDisabled: Bool {
+        trimmedMessage.isEmpty || viewModel.isLoading
+    }
+
+    private var statusBadge: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(viewModel.isLoading ? Color.orange : Color.green)
+                .frame(width: 8, height: 8)
+            Text(viewModel.isLoading ? "Thinking" : "Ready")
+                .font(.caption.weight(.semibold))
+            if viewModel.isLoading {
+                ProgressView()
+                    .controlSize(.small)
             }
-            .frame(width: 250)
-            .font(.headline)
-            Picker("Role", selection: $viewModel.selectedRole) {
-                ForEach(AssistantRole.allCases, id: \.self) { role in
-                    Text(role.rawValue)
-                        .tag(role)
-                        .keyboardShortcut(role.shortcut, modifiers: .command)
-                }
-            }
-            .frame(width: 150)
-            .font(.headline)
         }
-        .padding(8.0)
-        .background(BlurView(style: .contentBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.top, 12)
+        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .background(Color.primary.opacity(0.05))
+        .clipShape(Capsule())
+        .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading)
+        .accessibilityLabel(viewModel.isLoading ? "Jarvis is thinking" : "Jarvis is ready")
+    }
+
+    private var topBar: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(colors: [Color.accentColor.opacity(0.8), Color.accentColor.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                        .frame(width: 40, height: 40)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                        .accessibilityHidden(true)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Jarvis")
+                        .font(.title3.weight(.semibold))
+                    Text("Your Ollama-powered copilot")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                statusBadge
+            }
+
+            HStack(alignment: .center, spacing: 16) {
+                Picker("Model", selection: $viewModel.selectedModel) {
+                    ForEach(viewModel.availableModels, id: \.self) { model in
+                        Text(model).tag(model)
+                    }
+                }
+                .frame(width: 260)
+                .font(.headline)
+
+                Picker("Role", selection: $viewModel.selectedRole) {
+                    ForEach(AssistantRole.allCases, id: \.self) { role in
+                        Text(role.rawValue)
+                            .tag(role)
+                            .keyboardShortcut(role.shortcut, modifiers: .command)
+                    }
+                }
+                .frame(width: 170)
+                .font(.headline)
+
+                Spacer()
+
+                Text(viewModel.selectedRole.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(Color.primary.opacity(0.05))
+                    .clipShape(Capsule())
+                    .accessibilityLabel("Role description")
+            }
+        }
+        .padding(.vertical, 14)
         .padding(.horizontal, 16)
+        .background(BlurView(style: .contentBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
     }
 
     private var chatMessages: some View {
@@ -87,6 +161,13 @@ struct ContentView: View {
                 .padding(.vertical, 16)
             }
             .background(Color.clear)
+            .overlay {
+                if viewModel.messages.isEmpty {
+                    EmptyStateView(role: viewModel.selectedRole)
+                        .padding(.horizontal, 48)
+                        .padding(.vertical, 60)
+                }
+            }
             .onChange(of: viewModel.messages) { messages, _ in
                 if let lastMessage = messages.last {
                     withAnimation {
@@ -114,58 +195,101 @@ struct ContentView: View {
         }
     }
 
+    private func sendMessage() {
+        let message = trimmedMessage
+        guard !message.isEmpty, !viewModel.isLoading else { return }
+        messageText = ""
+        viewModel.sendMessage(message)
+    }
+
     private var imagePreview: some View {
         Group {
             if viewModel.selectedRole == .chat && !viewModel.selectedImages.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(viewModel.selectedImages) { image in
-                            SelectedImageView(image: image) {
-                                viewModel.removeSelectedImage(image)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Label(
+                            "\(viewModel.selectedImages.count) \(viewModel.selectedImages.count == 1 ? "Attachment" : "Attachments")",
+                            systemImage: "photo.on.rectangle"
+                        )
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.secondary)
+
+                        Spacer()
+
+                        Button("Clear All") {
+                            viewModel.clearSelectedImages()
+                        }
+                        .font(.caption)
+                        .buttonStyle(.plain)
+                        .foregroundColor(.secondary)
+                    }
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(viewModel.selectedImages) { image in
+                                SelectedImageView(image: image) {
+                                    viewModel.removeSelectedImage(image)
+                                }
                             }
                         }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .background(Color(NSColor.windowBackgroundColor).opacity(0.7))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
-                .background(Color(NSColor.windowBackgroundColor).opacity(0.7))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
                 Divider()
+                    .padding(.top, 12)
             }
         }
     }
 
     private var textEditorAndAttachButton: some View {
-        VStack(spacing: 0) {
-            CustomTextEditor(text: $messageText, onCommandReturn: {
-                let message = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !message.isEmpty else { return }
-                messageText = ""
-                viewModel.sendMessage(message)
-            })
-            .padding(10)
-            .background(Color(NSColor.windowBackgroundColor).opacity(0.9))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-            .frame(height: 80)
-            .focused($isEditorFocused)
+        VStack(alignment: .leading, spacing: 8) {
+            ZStack(alignment: .topLeading) {
+                CustomTextEditor(text: $messageText, onCommandReturn: {
+                    sendMessage()
+                })
+                .padding(EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18))
+                .frame(minHeight: 100, maxHeight: 160, alignment: .topLeading)
+                .focused($isEditorFocused)
+
+                if trimmedMessage.isEmpty {
+                    Text(viewModel.selectedRole.composerPlaceholder)
+                        .foregroundColor(.secondary.opacity(0.7))
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 18)
+                        .allowsHitTesting(false)
+                }
+            }
+            .background(Color(NSColor.windowBackgroundColor).opacity(0.94))
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(isEditorFocused ? Color.accentColor.opacity(0.25) : Color.primary.opacity(0.08), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 3)
+            .animation(.easeInOut(duration: 0.2), value: isEditorFocused)
+
             if viewModel.selectedRole == .chat {
-                HStack {
+                HStack(spacing: 12) {
                     Button(action: {
                         viewModel.selectImages()
                     }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "photo")
-                            Text("Attach Images")
-                        }
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        Label("Attach Images", systemImage: "paperclip")
+                            .font(.caption.weight(.semibold))
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .background(Color.primary.opacity(0.05))
+                            .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
-                    .padding(.top, 4)
+                    .accessibilityLabel("Attach images")
                     Spacer()
                 }
+                .padding(.top, 4)
             }
         }
     }
@@ -173,24 +297,45 @@ struct ContentView: View {
     private var sendAndClearButtons: some View {
         VStack(spacing: 12) {
             Button(action: {
-                let message = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !message.isEmpty else { return }
-                messageText = ""
-                viewModel.sendMessage(message)
+                sendMessage()
             }) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(.accentColor)
-                    .shadow(color: Color.accentColor.opacity(0.3), radius: 6, x: 0, y: 2)
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                        .frame(width: 52, height: 52)
+                        .shadow(color: Color.accentColor.opacity(0.4), radius: 8, x: 0, y: 4)
+
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .tint(.white)
+                            .scaleEffect(0.9)
+                    } else {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 20, weight: .heavy))
+                            .foregroundColor(.white)
+                    }
+                }
             }
             .buttonStyle(.plain)
-            .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
-            Button(action: { viewModel.clearMessages() }) {
-                Image(systemName: "trash.circle.fill")
-                    .font(.system(size: 28))
+            .disabled(isSendDisabled)
+            .accessibilityLabel(viewModel.isLoading ? "Sending disabled while Jarvis is thinking" : "Send message")
+
+            Button(action: {
+                viewModel.clearMessages()
+            }) {
+                Image(systemName: "trash")
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.red)
+                    .frame(width: 42, height: 42)
+                    .background(Color.red.opacity(0.12))
+                    .clipShape(Circle())
             }
+            .buttonStyle(.plain)
             .help("Clear chat history")
+            .accessibilityLabel("Clear chat history")
         }
     }
 }
@@ -198,7 +343,7 @@ struct ContentView: View {
 struct SelectedImageView: View {
     let image: AttachedImage
     let onRemove: () -> Void
-    
+
     var body: some View {
         ZStack(alignment: .topTrailing) {
             if let nsImage = NSImage(data: image.data) {
@@ -232,6 +377,56 @@ struct SelectedImageView: View {
             .buttonStyle(.plain)
             .offset(x: 5, y: -5)
         }
+    }
+}
+
+struct EmptyStateView: View {
+    let role: AssistantRole
+
+    var body: some View {
+        VStack(spacing: 18) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(colors: [Color.accentColor.opacity(0.2), Color.accentColor.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                    .frame(width: 72, height: 72)
+                Image(systemName: role.iconName)
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundColor(Color.accentColor)
+            }
+
+            Text("Start a conversation")
+                .font(.title3.weight(.semibold))
+
+            Text(role.description)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(role.quickTips, id: \.self) { tip in
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(Color.accentColor)
+                        Text(tip)
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(28)
+        .frame(maxWidth: 420)
+        .background(Color(NSColor.windowBackgroundColor).opacity(0.9))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 12)
+        .padding()
     }
 }
 
@@ -335,15 +530,16 @@ class CustomNSTextView: NSTextView {
 
 struct MessageBubble: View {
     let message: Message
-    
+
     var body: some View {
         HStack {
             if message.isUser {
                 Spacer()
             }
-            
+
             VStack(alignment: message.isUser ? .trailing : .leading, spacing: 12) {
-                // Display attached images if any
+                senderLabel
+
                 if !message.attachedImages.isEmpty {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: min(3, message.attachedImages.count)), spacing: 8) {
                         ForEach(message.attachedImages) { attachedImage in
@@ -352,34 +548,71 @@ struct MessageBubble: View {
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
                                     .frame(maxWidth: 200, maxHeight: 200)
-                                    .cornerRadius(16)
-                                    .shadow(color: Color.black.opacity(0.10), radius: 6, x: 0, y: 2)
+                                    .cornerRadius(18)
+                                    .shadow(color: Color.black.opacity(0.12), radius: 6, x: 0, y: 2)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 18)
+                                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                                    )
                                     .clipped()
                             }
                         }
                     }
+                    .padding(12)
+                    .background(Color.primary.opacity(0.05))
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                 }
-                
-                // Display text content if not empty
+
                 if !message.content.isEmpty {
                     Text(try! AttributedString(markdown: message.content, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
                         .textSelection(.enabled)
                         .padding(18)
+                        .frame(maxWidth: .infinity, alignment: message.isUser ? .trailing : .leading)
                         .background(
                             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .fill(message.isUser ? Color.accentColor : Color(NSColor.windowBackgroundColor).opacity(0.85))
-                                .shadow(color: Color.black.opacity(0.10), radius: 8, x: 0, y: 2)
+                                .fill(
+                                    message.isUser ?
+                                        LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing) :
+                                        LinearGradient(colors: [Color(NSColor.windowBackgroundColor).opacity(0.95), Color(NSColor.windowBackgroundColor).opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                )
                         )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .stroke(message.isUser ? Color.white.opacity(0.2) : Color.primary.opacity(0.05), lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(message.isUser ? 0.25 : 0.10), radius: 10, x: 0, y: 4)
                         .foregroundColor(message.isUser ? .white : .primary)
                 }
             }
             .frame(maxWidth: 700, alignment: message.isUser ? .trailing : .leading)
-            
+
             if !message.isUser {
                 Spacer()
             }
         }
         .padding(.horizontal, 2)
+    }
+
+    @ViewBuilder
+    private var senderLabel: some View {
+        HStack(spacing: 6) {
+            if message.isUser {
+                Spacer(minLength: 0)
+                Text("You")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.secondary)
+                Image(systemName: "person.fill")
+                    .foregroundColor(.secondary)
+            } else {
+                Image(systemName: "sparkles")
+                    .foregroundColor(Color.accentColor)
+                Text("Jarvis")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.secondary)
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(.horizontal, 4)
     }
 }
 
