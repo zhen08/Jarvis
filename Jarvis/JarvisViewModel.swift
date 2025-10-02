@@ -1,6 +1,5 @@
 import Foundation
 import SwiftUI
-import OllamaKit
 
 enum AssistantRole: String, CaseIterable {
     case chat = "General Chat"
@@ -103,42 +102,35 @@ struct Message: Identifiable, Equatable {
 
 class JarvisViewModel: ObservableObject {
     @Published var messages: [Message] = []
-    @Published var availableModels: [String] = []
-    @Published var selectedModel: String = "gemma3:4b-it-qat"
+    @Published var availableModels: [String] = [
+        "mlx-community/Qwen2.5-3B-Instruct-4bit",
+        "mlx-community/Qwen2.5-1.5B-Instruct-4bit"
+    ]
+    @Published var selectedModel: String = "mlx-community/Qwen2.5-3B-Instruct-4bit"
     @Published var selectedRole: AssistantRole = .translate {
         didSet {
             if oldValue != selectedRole {
                 clearMessages()
-                // Set default model based on role
-                switch selectedRole {
-                case .translate:
-                    selectedModel = "gemma3:4b-it-qat"
-                default:
-                    selectedModel = "qwen3:32b-fp16"
-                }
             }
         }
     }
     @Published var isLoading = false
+    @Published var isLoadingModel = false
+    @Published var modelLoadProgress: Double = 0.0
     @Published var errorMessage: String?
     @Published var selectedImages: [AttachedImage] = []
     
-    private let ollamaKit: OllamaKit
+    private let mlxManager: MLXModelManager
     private var streamTask: Task<Void, Never>?
     private var isProcessingThinkTag = false
     private var isDisplayingThinkingBlock = false
     
     init() {
-        // Initialize OllamaKit with default localhost URL
-        self.ollamaKit = OllamaKit(baseURL: URL(string: "http://localhost:11434")!)
-        // Set initial model based on initial role
-        switch selectedRole {
-        case .translate:
-            self.selectedModel = "gemma3:4b-it-qat"
-        default:
-            self.selectedModel = "qwen3:32b-fp16"
+        self.mlxManager = MLXModelManager()
+        // Load the model on initialization
+        Task {
+            await loadModel()
         }
-        loadAvailableModels()
     }
     
     func clearMessages() {
@@ -171,20 +163,18 @@ class JarvisViewModel: ObservableObject {
         selectedImages.removeAll()
     }
     
-    func loadAvailableModels() {
-        Task {
-            do {
-                let modelsResponse = try await ollamaKit.models()
-                await MainActor.run {
-                    self.availableModels = modelsResponse.models.map { $0.name }
-                    if !self.availableModels.contains(self.selectedModel) {
-                        self.selectedModel = self.availableModels.first ?? "gemma3:4b-it-qat"
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    self.errorMessage = "Failed to load models: \(error.localizedDescription)"
-                }
+    func loadModel() async {
+        await MainActor.run {
+            self.isLoadingModel = true
+            self.errorMessage = nil
+        }
+        
+        await mlxManager.loadModel(modelName: selectedModel)
+        
+        await MainActor.run {
+            self.isLoadingModel = false
+            if let error = self.mlxManager.errorMessage {
+                self.errorMessage = error
             }
         }
     }
@@ -227,6 +217,11 @@ class JarvisViewModel: ObservableObject {
         let userMessage = Message(content: content, isUser: true, attachedImages: selectedImages)
         messages.append(userMessage)
         
+        // Note: Image support will need to be added separately for MLX vision models
+        if !selectedImages.isEmpty {
+            errorMessage = "Note: Image support is not yet implemented with MLX. Images will be ignored."
+        }
+        
         // Clear selected images after sending
         selectedImages.removeAll()
         
@@ -241,78 +236,64 @@ class JarvisViewModel: ObservableObject {
         
         streamTask = Task {
             do {
+                // Check if model is loaded
+                guard mlxManager.isModelLoaded else {
+                    await MainActor.run {
+                        self.errorMessage = "Model is not loaded. Please wait for the model to load."
+                        self.isLoading = false
+                        if self.messages.last?.content.isEmpty == true && self.messages.last?.isUser == false {
+                            self.messages.removeLast()
+                        }
+                    }
+                    return
+                }
+                
                 if selectedRole == .chat {
-                    // Use chat endpoint for chat role
-                    var chatMessages: [OKChatRequestData.Message] = []
+                    // Use chat mode with conversation history
+                    var chatMessages: [ChatMessage] = []
                     
                     // Add system message if available
                     if !selectedRole.systemPrompt.isEmpty {
-                        chatMessages.append(OKChatRequestData.Message(role: .system, content: selectedRole.systemPrompt))
+                        chatMessages.append(ChatMessage(role: .system, content: selectedRole.systemPrompt))
                     }
                     
                     // Add conversation history (excluding the empty assistant placeholder)
                     for message in messages where message.id != messages.last?.id {
-                        if message.isUser || !message.content.isEmpty {
-                            let role: OKChatRequestData.Message.Role = message.isUser ? .user : .assistant
-                            
-                            // For user messages with images, include them in the images field
-                            if message.isUser && !message.attachedImages.isEmpty {
-                                let imageData = message.attachedImages.map { $0.data.base64EncodedString() }
-                                chatMessages.append(OKChatRequestData.Message(
-                                    role: role,
-                                    content: message.content,
-                                    images: imageData
-                                ))
-                            } else {
-                                chatMessages.append(OKChatRequestData.Message(role: role, content: message.content))
-                            }
+                        if message.isUser {
+                            chatMessages.append(ChatMessage(role: .user, content: message.content))
+                        } else if !message.content.isEmpty {
+                            chatMessages.append(ChatMessage(role: .assistant, content: message.content))
                         }
                     }
                     
-                    // Add current user message with images if any
-                    if !userMessage.attachedImages.isEmpty {
-                        let imageData = userMessage.attachedImages.map { $0.data.base64EncodedString() }
-                        chatMessages.append(OKChatRequestData.Message(
-                            role: .user,
-                            content: content,
-                            images: imageData
-                        ))
-                    } else {
-                        chatMessages.append(OKChatRequestData.Message(role: .user, content: content))
-                    }
+                    // Add current user message
+                    chatMessages.append(ChatMessage(role: .user, content: content))
                     
-                    var data = OKChatRequestData(
-                        model: selectedModel,
-                        messages: chatMessages
-                    )
-                    
-                    data.options = OKCompletionOptions(numCtx:32768,temperature:0.6,topP:0.9)
-
-                    for try await response in ollamaKit.chat(data: data) {
-                        guard !Task.isCancelled else { break }
-                        
-                        if let chunk = response.message?.content {
-                            await processChunk(chunk)
+                    // Generate with chat history
+                    try await mlxManager.generateChat(
+                        messages: chatMessages,
+                        temperature: 0.6,
+                        topP: 0.9,
+                        maxTokens: 2048
+                    ) { [weak self] token in
+                        guard let self = self else { return }
+                        Task {
+                            await self.processChunk(token)
                         }
                     }
                 } else {
-                    // Use generate endpoint for non-chat roles
-                    var data = OKGenerateRequestData(
-                        model: selectedModel,
-                        prompt: content
-                    )
-                    
-                    // Set system prompt if available
-                    if !selectedRole.systemPrompt.isEmpty {
-                        data.system = selectedRole.systemPrompt
-                    }
-
-                    data.options = OKCompletionOptions(temperature:0.3,topP:0.6)
-
-                    for try await response in ollamaKit.generate(data: data) {
-                        guard !Task.isCancelled else { break }
-                        
-                        await processChunk(response.response)
+                    // Use simple generation for non-chat roles (translate, fix grammar)
+                    try await mlxManager.generate(
+                        prompt: content,
+                        systemPrompt: selectedRole.systemPrompt,
+                        temperature: 0.3,
+                        topP: 0.6,
+                        maxTokens: 2048
+                    ) { [weak self] token in
+                        guard let self = self else { return }
+                        Task {
+                            await self.processChunk(token)
+                        }
                     }
                 }
                 

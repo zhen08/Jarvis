@@ -15,19 +15,19 @@ struct JarvisApp: App {
         .windowResizability(.contentSize)
         .commands {
             CommandGroup(replacing: .appInfo) {
-                Button("About Jarvis") {
-                    NSApplication.shared.orderFrontStandardAboutPanel(
-                        options: [
-                            NSApplication.AboutPanelOptionKey.credits: NSAttributedString(
-                                string: "A native macOS AI assistant powered by Ollama",
-                                attributes: [
-                                    .foregroundColor: NSColor.textColor
-                                ]
-                            ),
-                            NSApplication.AboutPanelOptionKey.version: ""
-                        ]
-                    )
-                }
+            Button("About Jarvis") {
+                NSApplication.shared.orderFrontStandardAboutPanel(
+                    options: [
+                        NSApplication.AboutPanelOptionKey.credits: NSAttributedString(
+                            string: "A native macOS AI assistant powered by MLX",
+                            attributes: [
+                                .foregroundColor: NSColor.textColor
+                            ]
+                        ),
+                        NSApplication.AboutPanelOptionKey.version: ""
+                    ]
+                )
+            }
             }
         }
     }

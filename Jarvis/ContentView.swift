@@ -60,11 +60,11 @@ struct ContentView: View {
     private var statusBadge: some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(viewModel.isLoading ? Color.orange : Color.green)
+                .fill(viewModel.isLoadingModel ? Color.blue : (viewModel.isLoading ? Color.orange : Color.green))
                 .frame(width: 8, height: 8)
-            Text(viewModel.isLoading ? "Thinking" : "Ready")
+            Text(viewModel.isLoadingModel ? "Loading Model" : (viewModel.isLoading ? "Thinking" : "Ready"))
                 .font(.caption.weight(.semibold))
-            if viewModel.isLoading {
+            if viewModel.isLoading || viewModel.isLoadingModel {
                 ProgressView()
                     .controlSize(.small)
             }
@@ -74,7 +74,8 @@ struct ContentView: View {
         .background(Color.primary.opacity(0.05))
         .clipShape(Capsule())
         .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading)
-        .accessibilityLabel(viewModel.isLoading ? "Jarvis is thinking" : "Jarvis is ready")
+        .animation(.easeInOut(duration: 0.2), value: viewModel.isLoadingModel)
+        .accessibilityLabel(viewModel.isLoadingModel ? "Model is loading" : (viewModel.isLoading ? "Jarvis is thinking" : "Jarvis is ready"))
     }
 
     private var topBar: some View {
@@ -95,7 +96,7 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Jarvis")
                         .font(.title3.weight(.semibold))
-                    Text("Your Ollama-powered copilot")
+                    Text("Your MLX-powered copilot")
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 }
