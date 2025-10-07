@@ -127,6 +127,54 @@ struct ContentView: View {
 
                 Spacer()
 
+                // Cache management section
+                Menu {
+                    Button(action: {
+                        viewModel.chooseDownloadDirectory()
+                    }) {
+                        Label("Change Download Location...", systemImage: "folder")
+                    }
+
+                    Divider()
+
+                    Button(role: .destructive, action: {
+                        viewModel.showingClearCacheConfirmation = true
+                    }) {
+                        Label("Clear Cache (\(viewModel.cacheSize))", systemImage: "trash")
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "externaldrive.fill")
+                            .font(.caption)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Model Cache")
+                                .font(.caption2.weight(.semibold))
+                            Text(viewModel.cacheSize)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(Color.primary.opacity(0.05))
+                    .clipShape(Capsule())
+                }
+                .menuStyle(.borderlessButton)
+                .buttonStyle(.plain)
+                .help("Manage model downloads and cache")
+                .confirmationDialog(
+                    "Clear Model Cache",
+                    isPresented: $viewModel.showingClearCacheConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("Clear Cache (\(viewModel.cacheSize))", role: .destructive) {
+                        viewModel.clearModelCache()
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This will delete all downloaded models from \(viewModel.modelDownloadPath). The app will re-download models when needed.")
+                }
+
                 Text(viewModel.selectedRole.description)
                     .font(.caption)
                     .foregroundColor(.secondary)

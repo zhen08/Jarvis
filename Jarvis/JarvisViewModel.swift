@@ -119,7 +119,10 @@ class JarvisViewModel: ObservableObject {
     @Published var modelLoadProgress: Double = 0.0
     @Published var errorMessage: String?
     @Published var selectedImages: [AttachedImage] = []
-    
+    @Published var cacheSize: String = "Calculating..."
+    @Published var showingClearCacheConfirmation = false
+    @Published var modelDownloadPath: String = ""
+
     private let mlxManager: MLXModelManager
     private var streamTask: Task<Void, Never>?
     private var isProcessingThinkTag = false
@@ -127,9 +130,11 @@ class JarvisViewModel: ObservableObject {
     
     init() {
         self.mlxManager = MLXModelManager()
+        self.modelDownloadPath = MLXModelManager.modelDownloadDirectory.path
         // Load the model on initialization
         Task {
             await loadModel()
+            await updateCacheSize()
         }
     }
     
@@ -368,4 +373,55 @@ class JarvisViewModel: ObservableObject {
             }
         }
     }
-} 
+
+    func updateCacheSize() async {
+        let size = MLXModelManager.getCacheSize()
+        await MainActor.run {
+            self.cacheSize = MLXModelManager.formatBytes(size)
+        }
+    }
+
+    func clearModelCache() {
+        // Unload current model first
+        mlxManager.unloadModel()
+
+        // Clear the cache
+        let success = MLXModelManager.clearCache()
+
+        if success {
+            Task {
+                await updateCacheSize()
+                // Reload the model
+                await loadModel()
+            }
+        } else {
+            errorMessage = "Failed to clear model cache"
+        }
+    }
+
+    func chooseDownloadDirectory() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.title = "Choose Model Download Directory"
+        panel.message = "Select a folder where MLX models will be downloaded"
+        panel.directoryURL = MLXModelManager.modelDownloadDirectory
+
+        if panel.runModal() == .OK, let url = panel.url {
+            // Unload current model
+            mlxManager.unloadModel()
+
+            // Update the download directory
+            MLXModelManager.setModelDownloadDirectory(url)
+            modelDownloadPath = url.path
+
+            // Reload model from new location
+            Task {
+                await updateCacheSize()
+                await loadModel()
+            }
+        }
+    }
+}

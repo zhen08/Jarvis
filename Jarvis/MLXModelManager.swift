@@ -1,20 +1,40 @@
 import Foundation
 import MLXLMCommon
+import Hub
 
 /// Manages MLX model loading and inference for language models
 class MLXModelManager: ObservableObject {
     @Published var isModelLoaded = false
     @Published var loadingProgress: Double = 0.0
     @Published var errorMessage: String?
-    
+
     private var model: ModelContext?
     private var chatSession: ChatSession?
-    
+    private var hubApi: HubApi
+
     // Default model path - can be customized
     // Using Qwen2.5 as it's well-tested and reliable
     private let defaultModelName = "mlx-community/Qwen2.5-3B-Instruct-4bit"
-    
-    init() {}
+
+    // Model download directory
+    static var modelDownloadDirectory: URL {
+        get {
+            if let savedPath = UserDefaults.standard.string(forKey: "modelDownloadDirectory"),
+               let url = URL(string: savedPath) {
+                return url
+            }
+            // Default to Documents/MLX-Models
+            let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            return documentsDir.appendingPathComponent("MLX-Models")
+        }
+        set {
+            UserDefaults.standard.set(newValue.absoluteString, forKey: "modelDownloadDirectory")
+        }
+    }
+
+    init() {
+        self.hubApi = HubApi(downloadBase: Self.modelDownloadDirectory)
+    }
     
     /// Load a language model from Hugging Face
     func loadModel(modelName: String? = nil) async {
@@ -23,24 +43,35 @@ class MLXModelManager: ObservableObject {
             self.loadingProgress = 0.0
             self.errorMessage = nil
         }
-        
+
         do {
             let name = modelName ?? defaultModelName
-            
+
             await MainActor.run {
                 self.loadingProgress = 0.3
             }
-            
-            // Load the model using MLXLMCommon's loadModel
-            let loadedModel = try await MLXLMCommon.loadModel(id: name)
-            
+
+            // Update HubApi with current download directory
+            self.hubApi = HubApi(downloadBase: Self.modelDownloadDirectory)
+
+            // Load the model using MLXLMCommon's loadModel with custom hub
+            let loadedModel = try await MLXLMCommon.loadModel(
+                hub: hubApi,
+                configuration: ModelConfiguration(id: name)
+            ) { progress in
+                Task { @MainActor in
+                    // Update progress based on download status
+                    self.loadingProgress = 0.3 + (progress.fractionCompleted * 0.7)
+                }
+            }
+
             await MainActor.run {
                 self.model = loadedModel
                 self.chatSession = ChatSession(loadedModel)
                 self.loadingProgress = 1.0
                 self.isModelLoaded = true
             }
-            
+
         } catch {
             await MainActor.run {
                 self.errorMessage = "Failed to load model: \(error.localizedDescription)"
@@ -111,6 +142,65 @@ class MLXModelManager: ObservableObject {
         chatSession = nil
         isModelLoaded = false
         loadingProgress = 0.0
+    }
+
+    /// Get the model cache directory path (uses the configured download directory)
+    static func getCacheDirectory() -> URL {
+        return modelDownloadDirectory
+    }
+
+    /// Get the size of the model cache in bytes
+    static func getCacheSize() -> Int64 {
+        let cacheDir = getCacheDirectory()
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: cacheDir.path) else { return 0 }
+
+        var totalSize: Int64 = 0
+
+        if let enumerator = fileManager.enumerator(at: cacheDir, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles]) {
+            for case let fileURL as URL in enumerator {
+                if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
+                   let fileSize = resourceValues.fileSize {
+                    totalSize += Int64(fileSize)
+                }
+            }
+        }
+
+        return totalSize
+    }
+
+    /// Clear all cached models
+    /// - Returns: True if successful, false otherwise
+    @discardableResult
+    static func clearCache() -> Bool {
+        let cacheDir = getCacheDirectory()
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: cacheDir.path) else { return true }
+
+        do {
+            try fileManager.removeItem(at: cacheDir)
+            // Recreate the directory
+            try fileManager.createDirectory(at: cacheDir, withIntermediateDirectories: true)
+            return true
+        } catch {
+            print("Failed to clear cache: \(error)")
+            return false
+        }
+    }
+
+    /// Set a custom model download directory
+    static func setModelDownloadDirectory(_ url: URL) {
+        modelDownloadDirectory = url
+        // Create directory if it doesn't exist
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+    }
+
+    /// Format bytes to human-readable string
+    static func formatBytes(_ bytes: Int64) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useGB, .useMB]
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: bytes)
     }
 }
 
